@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from MA_core.MAgrid import MAGrid
-from MA_core.objects import MAGoal, Agent
-from MA_core.MAminigrid import MultiGridEnv
+from MA_minigrid.MA_core.MAgrid import MAGrid
+from MA_minigrid.MA_core.objects import MAGoal, Agent
+from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
 from minigrid.core.mission import MissionSpace
 
 
@@ -53,7 +53,7 @@ class EmptyEnv(MultiGridEnv):
     def __init__(
         self,
         agent_indexes: list,
-        size=8,
+        size=9,
         max_steps: int | None = None,
         **kwargs,
     ):

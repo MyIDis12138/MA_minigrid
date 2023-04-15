@@ -4,6 +4,7 @@ import hashlib
 import math
 from abc import abstractmethod
 from typing import Any, Iterable, SupportsFloat, TypeVar, List, Tuple
+from copy import deepcopy as copy
 
 import gymnasium as gym
 import numpy as np
@@ -55,7 +56,8 @@ class MultiGridEnv(gym.Env):
         assert num_missions>0, "Must have at least one mission"
         self.agents = agents
         self.num_missions = num_missions
-        self.missions = [mission_space.sample() for _ in range(self.num_missions)]
+        missions = [mission_space.sample() for _ in range(self.num_missions)]
+        self.missions = {mission: [agent.id for agent in self.agents] for mission in missions}
         self.agent_view_size = agent_view_size
 
         # set environment parameters
@@ -221,7 +223,7 @@ class MultiGridEnv(gym.Env):
         pass
 
     @abstractmethod
-    def _handle_overlap(self, agent_idx, fwd_pos):
+    def _handle_overlap(self, i, rewards, agent_idx, fwd_pos):
         pass
 
     @abstractmethod
@@ -230,14 +232,15 @@ class MultiGridEnv(gym.Env):
     
     def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
         if fwd_cell.can_pickup() and self.agents[i].carrying is None:
-            self.agents[i].carrying = fwd_cell
+            self.agents[i].carrying = copy(fwd_cell)
+            self.grid.set(*fwd_pos, None)
 
     def _handle_drop(self, i, rewards, fwd_pos, fwd_cell):
-        if self.agents[i].carrying is not None and fwd_cell is None:
-            fwd_cell = self.agents[i].carrying
+        if self.agents[i].carrying is not None:
+            self.grid.set(*fwd_pos, copy(self.agents[i].carrying))
             self.agents[i].carrying = None
 
-    def _reward(self, current_agent, discount_factor=0.9, max_reward=1):
+    def _reward(self, agent_id, discount_factor=0.9, max_reward=1):
         """
         Compute the reward to be given upon success
         """
@@ -310,7 +313,7 @@ class MultiGridEnv(gym.Env):
     def place_obj(
         self,
         obj: MAWorldObj | Agent | None,
-        top: Point | None,
+        top: Point = None,
         size: tuple[int, int] = None,
         reject_fn=None,
         max_tries=math.inf,
@@ -383,15 +386,15 @@ class MultiGridEnv(gym.Env):
         """
         Put an object at a specific position in the grid
         """
-        assert obj.encode()[0] != OBJECT_TO_IDX["agent"], 'Cannot put agent in grid'
-        self.grid.set(i, j, obj)
+        #assert obj.encode()[0] != OBJECT_TO_IDX["agent"], 'Cannot put agent in grid'
+        self.grid.set_agent(i, j, obj) if obj.encode()[0] == OBJECT_TO_IDX["agent"] else self.grid.set(i, j, obj)
         obj.init_pos = (i, j)
         obj.cur_pos = (i, j)
 
     def place_agent(
         self, 
         agent: Agent | None,
-        top: Point | None,
+        top:Point = None,
         size: tuple[int, int] = None,
         reject_fn=None,
         agent_dir: int = -1,
@@ -432,6 +435,9 @@ class MultiGridEnv(gym.Env):
     def step(
         self, actions: List[ActType]
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+        assert isinstance(actions, list), 'actions must be a list'
+        assert len(actions) == len(self.agents), 'must have an action for each agent'
+
         self.step_count += 1
 
         rewards = np.zeros(len(actions))
@@ -441,7 +447,7 @@ class MultiGridEnv(gym.Env):
         order = np.random.permutation(len(actions))
 
         for i in order:
-
+            reward = 0
             if self.agents[i].terminated or self.agents[i].paused or not self.agents[i].started:
                 continue
 
@@ -468,20 +474,22 @@ class MultiGridEnv(gym.Env):
                     self.grid.set_agent(*fwd_pos, self.agents[i])
                     self.grid.set_agent(*self.agents[i].cur_pos, None)
                     self.agents[i].cur_pos = fwd_pos
-                elif fwd_cell.can_overlap() and fwd_agent is None:
-                    self._handle_overlap(i, fwd_pos)
+                elif fwd_cell and fwd_cell.can_overlap() and fwd_agent is None:
+                    reward, terminated = self._handle_overlap(i, rewards, fwd_pos, fwd_cell)
 
             # Pick up an object
             elif actions[i] == self.actions.pickup:
-                self._handle_pickup(i, rewards, fwd_pos, fwd_cell) # TODO: add pickup reward
+                if fwd_cell and not fwd_agent:
+                    self._handle_pickup(i, rewards, fwd_pos, fwd_cell) # TODO: add pickup reward
 
             # Drop an object
             elif actions[i] == self.actions.drop:
-                self._handle_drop(i, rewards, fwd_pos, fwd_cell) #TODO: add drop reward
+                if not (fwd_cell or fwd_agent):
+                    self._handle_drop(i, rewards, fwd_pos, fwd_cell) #TODO: add drop reward
 
             # Toggle/activate an object
             elif actions[i] == self.actions.toggle:
-                if fwd_cell:
+                if fwd_cell and not fwd_agent:
                     fwd_cell.toggle(self, fwd_pos)
 
             # Done action (not used by default)
@@ -490,9 +498,11 @@ class MultiGridEnv(gym.Env):
 
             else:
                 assert False, "unknown action"
+            
+            rewards[i] = reward
 
-            if self.step_count >= self.max_steps:
-                truncated = True
+        if self.step_count >= self.max_steps:
+            truncated = True
 
         if self.partial_obs:
             obs = self.gen_obs()
@@ -541,26 +551,16 @@ class MultiGridEnv(gym.Env):
         
         grids, vis_masks = self.gen_obs_grid()
 
-        # Encode the partially observable view into a numpy array	
+        assert isinstance(self.missions, dict), "mission must be a dictionary indicating the mission for agents"
+        
         image = [grid.encode(vis_mask) for grid, vis_mask in zip(grids, vis_masks)]
-        assert isinstance(self.missions, list), "mission must be a list of strings"
-        assert len(self.missions) == self.num_missions, "mission string and number of missions must match"	
-        # Observations are dictionaries containing:	
-        # - an image (partially observable view of the environment)	
-        # - the agent's direction/orientation (acting as a compass)	
-        # - a textual mission string (instructions for the agent)	
         obs = []
-        for i in range(len(self.agents)):
-            if i < len(self.missions):
-                obs.append({
-                    'image': image[i],
-                    'mission': self.missions[i],
-                })
-            else:
-                obs.append({
-                    'image': image[i],
-                    'mission': "No mission",
-                })
+        for i in range(len(self.agents)):	
+            obs.append({
+                'image': image[i],
+                'mission': [key for key, value in self.missions.items() if i in value],
+            })
+        
         return obs
 
     def get_obs_render(self, obs, tile_size=TILE_PIXELS // 2):
@@ -609,7 +609,7 @@ class MultiGridEnv(gym.Env):
             bg = pygame.transform.smoothscale(bg, (self.screen_size, self.screen_size))
 
             font_size = 22
-            text = self.mission
+            text = self.window_name
             font = pygame.freetype.SysFont(pygame.font.get_default_font(), font_size)
             text_rect = font.get_rect(text, size=font_size)
             text_rect.center = bg.get_rect().center

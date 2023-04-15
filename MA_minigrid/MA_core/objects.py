@@ -1,10 +1,31 @@
 from __future__ import annotations
 
-from minigrid.core.world_object import *
-from minigrid.core.constants import *
-from minigrid.utils.rendering import point_in_triangle, rotate_fn
+from typing import TYPE_CHECKING, Tuple
+
 import math
 import numpy as np
+from minigrid.core.world_object import *
+
+from minigrid.core.constants import (
+    COLOR_TO_IDX,
+    COLORS,
+    IDX_TO_COLOR,
+    IDX_TO_OBJECT,
+    OBJECT_TO_IDX,
+    DIR_TO_VEC
+)
+from minigrid.utils.rendering import (
+    fill_coords,
+    point_in_circle,
+    point_in_line,
+    point_in_rect,
+    point_in_triangle,
+    rotate_fn
+)
+
+if TYPE_CHECKING:
+    from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
+
 
 class DoorWID(Door):
     def __init__(self, color, id, is_open=False, is_locked=False):
@@ -63,6 +84,10 @@ class MAWorldObj(WorldObj):
         """Encode the a description of this object as a 3-tuple of integers"""
         return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
 
+    def toggle(self, env: MultiGridEnv, pos: tuple[int, int]) -> bool:
+        """Method to trigger/toggle an action this object performs"""
+        return False
+
     @staticmethod
     def decode(type_idx, color_idx, state):
         """Create an object from a 9-tuple state description"""
@@ -102,9 +127,10 @@ class MAWorldObj(WorldObj):
 class Agent(MAWorldObj):
     def __init__(
             self, 
-            index=0, 
-            direction=0, 
-            view_size=7
+            id = None,
+            index = 0,
+            direction = 0, 
+            view_size = 7
         ):
         assert index >= 0 and index < 6, "index must be between 0 and 5"
         super(Agent, self).__init__('agent', IDX_TO_COLOR[index])
@@ -114,11 +140,13 @@ class Agent(MAWorldObj):
         self.view_size = view_size
         assert direction in [0,1,2,3], "direction must be between 0 and 3"
         self.dir = direction
+        self.id = id or index
         self.index = index
         self.carrying: MAWorldObj | None = None
         self.terminated = False
         self.started = True
         self.paused = False
+        assert id is not None, "id must be specified"
 
     def render(self, img):
         c = COLORS[self.color]
@@ -479,5 +507,13 @@ class MABoxWID(MABox):
         else:
             # Replace the box by its contents
             env.grid.set(*pos, self.contains)
+        return True
+    
+
+class Oracle(Ball):
+    def __init__(self, color):
+        super().__init__(color)
+
+    def can_overlap(self):
         return True
     

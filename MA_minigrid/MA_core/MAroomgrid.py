@@ -98,10 +98,8 @@ class MARoomgrid(MultiGridEnv):
 
         # create the agents
         agents = []
-        for i in agents_index:
-            agents.append(Agent(i, view_size=agent_view_size))
-
-        self.missions = ""
+        for id, i in enumerate(agents_index):
+            agents.append(Agent(id, i, view_size=agent_view_size))
         
         super().__init__(
             agents=agents,

@@ -6,8 +6,8 @@ import pygame
 from gymnasium import Env
 
 from minigrid.core.actions import Actions
-from envs.MA_empty import EmptyEnv
-from wrappers import ImgObsWrapper, FirstObsWrapper, RGBImgObsWrapper
+from MA_minigrid.envs.Danger_gound import DangerGroundEnv
+from MA_minigrid.wrappers import ImgObsWrapper, RGBImgObsWrapper
 
 
 class ManualControl:
@@ -34,9 +34,8 @@ class ManualControl:
                     self.key_handler(event)
 
     def step(self, action: Actions):
-        _, reward, terminated, truncated, _ = self.env.step(action)
+        obs, reward, terminated, truncated, _ = self.env.step(action)
         print(f"step={self.env.step_count}, reward={reward:.2f}")
-
         if terminated:
             print("terminated!")
             self.reset(self.seed)
@@ -47,7 +46,7 @@ class ManualControl:
             self.env.render()
 
     def reset(self, seed=None):
-        self.env.reset(seed=seed)
+        self.env.reset()
         self.env.render()
 
     def key_handler(self, event):
@@ -74,17 +73,16 @@ class ManualControl:
         }
         if key in key_to_action.keys():
             action = key_to_action[key]
-            self.step([action])
+            self.step(action)
         else:
             print(key)
 
 
 if __name__ == "__main__":
 
-    env = EmptyEnv([1])
-    env = FirstObsWrapper(env)
-    env = RGBImgObsWrapper(env)
-    env = ImgObsWrapper(env)
+    env = DangerGroundEnv()
+    #env = RGBImgObsWrapper(env)
+    #env = ImgObsWrapper(env)
 
     manual_control = ManualControl(env, seed=33)
     manual_control.start()

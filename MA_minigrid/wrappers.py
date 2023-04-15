@@ -12,9 +12,9 @@ from gymnasium import logger, spaces
 from gymnasium.core import ObservationWrapper, ObsType, Wrapper
 
 from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
-from MA_core.objects import MAGoal
+from MA_minigrid.MA_core.objects import MAGoal
 
-class FirstObsWrapper(ObservationWrapper):
+class SignalObsWrapper(ObservationWrapper):
     """
     Use the first observation in the list as the only observation output.
     Example:
@@ -41,10 +41,6 @@ class FirstObsWrapper(ObservationWrapper):
     def observation(self, obs):
         return obs[0]
     
-    def step(self, actions):
-        obs, rewards, terminated, turnicated, _ =super().step(actions)
-        return obs, rewards[0], terminated, turnicated, _
-
 class ImgObsWrapper(ObservationWrapper):
     """
     Use the image as the only observation output, no language/mission.
@@ -111,3 +107,43 @@ class RGBImgObsWrapper(ObservationWrapper):
         rgb_img = self.get_full_render(highlight=True, tile_size=self.tile_size)
 
         return {**obs, "image": rgb_img}
+
+
+class SingleAgentWrapper(Wrapper):
+    """
+    Use the image as the only observation output, no language/mission.
+    Example:
+        >>> import gymnasium as gym
+        >>> from minigrid.wrappers import SimpleObsWrapper
+        >>> env = gym.make("MiniGrid-Empty-5x5-v0")
+        >>> obs, _ = env.reset()
+        >>> obs.keys()
+        dict_keys(['image', 'direction', 'mission'])
+        >>> env = SimpleObsWrapper(env)
+        >>> obs, _ = env.reset()
+        >>> obs.shape
+        (7, 7, 9)
+    """
+
+    def __init__(self, env):
+        """A wrapper that makes image the only observation.
+        Args:
+            env: The environment to apply the wrapper
+        """
+        super().__init__(env)
+        self.observation_space = env.observation_space.spaces[0]
+
+    def observation(self, obs):
+        obs = obs[0]
+        obs['mission'] = obs['mission'][0]
+        return obs
+    
+    def reset(self):
+        obs,_ = super().reset()
+        return self.observation(obs)
+    
+    def step(self, actions):
+        obs, rewards, terminated, truncated, _ = super().step([actions])
+        return self.observation(obs), rewards[0], terminated, truncated, _
+    
+

@@ -126,9 +126,7 @@ class MultiGridEnv(gym.Env):
 
         # Reinitialize episode-specific variables
         for agent in self.agents:
-            agent.init_pos = None
-            agent.cur_pos = None
-            agent.dir = None
+            agent.reset()
 
         self._gen_grid(self.width, self.height) 
         
@@ -137,7 +135,6 @@ class MultiGridEnv(gym.Env):
             assert agent.init_pos is not None
             assert agent.cur_pos is not None
             assert agent.dir is not None
-            agent.carrying = None
         
         # Step count since episode start
         self.step_count = 0
@@ -223,13 +220,14 @@ class MultiGridEnv(gym.Env):
         pass
 
     @abstractmethod
-    def _handle_overlap(self, i, rewards, agent_idx, fwd_pos):
-        pass
-
-    @abstractmethod
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
         pass
     
+    def _handle_overlap(self, i, rewards, fwd_pos, fwd_cell):
+        self.grid.set_agent(*fwd_pos, self.agents[i])
+        self.grid.set_agent(*self.agents[i].cur_pos, None)
+        self.agents[i].cur_pos = fwd_pos
+
     def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
         if fwd_cell.can_pickup() and self.agents[i].carrying is None:
             self.agents[i].carrying = copy(fwd_cell)
@@ -475,7 +473,7 @@ class MultiGridEnv(gym.Env):
                     self.grid.set_agent(*self.agents[i].cur_pos, None)
                     self.agents[i].cur_pos = fwd_pos
                 elif fwd_cell and fwd_cell.can_overlap() and fwd_agent is None:
-                    reward, terminated = self._handle_overlap(i, rewards, fwd_pos, fwd_cell)
+                    self._handle_overlap(i, rewards, fwd_pos, fwd_cell)
 
             # Pick up an object
             elif actions[i] == self.actions.pickup:

@@ -171,6 +171,14 @@ class Agent(MAWorldObj):
         v.carrying = MAWorldObj.decode(carrying_type, carrying_color, 0) if carrying else None
         return v
     
+    def reset(self):
+        self.terminated = False
+        self.started = True
+        self.paused = False
+        self.dir = None
+        self.cur_pos = None
+        self.init_pos = None
+        self.carrying = None
 
     @property
     def dir_vec(self):

@@ -117,15 +117,6 @@ class DangerGroundEnv(MARoomGridLevel):
         self.grid.set(3, 1, None)
         self.grid.set(*self.oracle_pos, Oracle(color='red'))
 
-    def _handle_overlap(self, agent_id, rewards, fwd_pos, fwd_cell):
-        type, color, _ = self.grid.get(*fwd_pos).encode()
-        if type == OBJECT_TO_IDX['lava'] and color == COLOR_TO_IDX[self.lava_colors[self.danger_color_idx]]:
-            return 0, True
-        self.grid.set_agent(*fwd_pos, self.agents[agent_id])
-        self.grid.set_agent(*self.agents[agent_id].cur_pos, None)
-        self.agents[agent_id].cur_pos = fwd_pos
-        return 0, False
-
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == self.danger_names[self.danger_name_idx]:
             return self.useful_answers[0]

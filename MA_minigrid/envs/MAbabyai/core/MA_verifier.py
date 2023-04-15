@@ -169,8 +169,13 @@ class GoToGoalInstr(MAActionInstr):
         return "go to the " + self.goal.surface(env)
 
     def verify_action(self, action):
+        pos = self.env.agents[self.agent_id].cur_pos
+        cur_cell = self.env.grid.get(*pos)
 
-        if np.array_equal(self.env.agents[self.agent_id].front_pos, self.goal_pos) and action==self.env.actions.forward:
+        if cur_cell and cur_cell.type == 'lava' and cur_cell.color == self.env.lava_colors[self.env.danger_color_idx]:
+            return 'failure'
+
+        if np.array_equal(pos, self.goal_pos):
             return "success"
 
         return "continue"

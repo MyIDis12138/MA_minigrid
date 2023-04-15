@@ -76,16 +76,24 @@ class MARoomGridLevel(MARoomgrid):
         status = self.instrs_controller.verify(actions)
         rewards = []
 
+        info['success'] = False
         for id, s in enumerate(status):
             reward = 0 
             if s == "success":
-                terminated = True
+                self.agents[id].terminated = True
+                info['success'] = True
                 reward = self._reward(id)
             elif s == "failure":
-                terminated = True           
+                self.agents[id].terminated = True
+            elif status == 'continue':
+                self.agents[id].terminated = False
             rewards.append(reward)
-                
 
+        terminated = all([agent.terminated for agent in self.agents])
+
+        if self.unwrapped.steps_remaining <= 0:
+            truncated = True
+                
         return obs, rewards, terminated, truncated, info
     
     def update_objs_poss(self, instr=None):

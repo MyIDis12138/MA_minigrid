@@ -15,15 +15,39 @@ class ManualControl:
         self,
         env: Env,
         seed: int=None,
+        key_to_action=None,
     ) -> None:
+        """
+        Manual control of the environment with keyboard.
+        :param env: environment to control, must be a single agent minigrid environment
+        :param seed: seed for the environment
+        :param key_to_action: dictionary mapping key names to actions
+        """
         self.env = env
         self.seed = seed
         self.closed = False
+        if key_to_action is None:
+            self.key_to_action = {
+                "a": Actions.left,
+                "d": Actions.right,
+                "w": Actions.forward,
+                " ": Actions.toggle,
+                "pageup": Actions.pickup,
+                "pagedown": Actions.drop,
+                "tab": Actions.pickup,
+                "left shift": Actions.drop,
+                "enter": Actions.done,
+            }
+        else:
+            self.key_to_action = key_to_action
+            
+        print("ManualControl: key_to_action= ", self.key_to_action)
+
 
     def start(self):
         """Start the window display with blocking event loop"""
         self.reset(self.seed)
-
+        
         while not self.closed:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -34,13 +58,10 @@ class ManualControl:
                     self.key_handler(event)
 
     def step(self, action: Actions):
-        obs, reward, terminated, truncated, _ = self.env.step(action)
-        print(f"step={self.env.step_count}, reward={reward:.2f}")
-        if terminated:
-            print("terminated!")
-            self.reset(self.seed)
-        elif truncated:
-            print("truncated!")
+        obs, reward, done, info = self.env.step(action)
+        print(f"step={self.env.step_count}, reward={reward:.2f}, info={info}")
+        if done:
+            print("done!")
             self.reset(self.seed)
         else:
             self.env.render()
@@ -60,19 +81,8 @@ class ManualControl:
             self.reset()
             return
 
-        key_to_action = {
-            "a": Actions.left,
-            "d": Actions.right,
-            "w": Actions.forward,
-            " ": Actions.toggle,
-            "pageup": Actions.pickup,
-            "pagedown": Actions.drop,
-            "tab": Actions.pickup,
-            "left shift": Actions.drop,
-            "enter": Actions.done,
-        }
-        if key in key_to_action.keys():
-            action = key_to_action[key]
+        if key in self.key_to_action.keys():
+            action = self.key_to_action[key]
             self.step(action)
         else:
             print(key)

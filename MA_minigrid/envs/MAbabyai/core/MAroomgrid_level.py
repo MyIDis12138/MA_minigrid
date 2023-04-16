@@ -23,7 +23,7 @@ class MARoomGridLevel(MARoomgrid):
 
     def __init__(
             self, 
-            agents_index: list[int] = [0], 
+            agents_colors: list[str] = [], 
             room_size=8, 
             max_steps: int | None = None, 
             **kwargs
@@ -39,7 +39,7 @@ class MARoomGridLevel(MARoomgrid):
         else:
             max_steps = 0  # only for initialization
         super().__init__(
-            agents_index=agents_index,
+            agents_colors=agents_colors,
             room_size=room_size,
             mission_space=mission_space,
             **kwargs,
@@ -60,6 +60,11 @@ class MARoomGridLevel(MARoomgrid):
             for num_nav in num_navs:
                 max_steps = num_nav * nav_time_maze
                 self.max_steps = max(max_steps, self.max_steps)
+
+        mission_text = ""
+        for agent in self.agents:
+            mission_text += f"agent {agent.id} mission: " + self.instrs_controller.surface(self, agent.id) + "\n"
+        self.mission_text = mission_text
 
         return obs
     
@@ -132,65 +137,12 @@ class MARoomGridLevel(MARoomgrid):
 
             break
 
-        
     def validate_instrs(self, instrs):
         """
         Perform some validation on the generated instructions
         """
         # Gather the colors of locked doors
-        for instr in instrs: 
-            colors_of_locked_doors = []
-            if hasattr(self, "unblocking") and self.unblocking:
-                for i in range(self.num_cols):
-                    for j in range(self.num_rows):
-                        room = self.get_room(i, j)
-                        for door in room.doors:
-                            if door and door.is_locked:
-                                colors_of_locked_doors.append(door.color)
-
-            if isinstance(instr, PutNextInstr):
-                # Resolve the objects referenced by the instruction
-                instr.reset_verifier(self)
-
-                # Check that the objects are not already next to each other
-                if set(instr.desc_move.obj_set).intersection(set(instr.desc_fixed.obj_set)):
-                    raise RejectSampling(
-                        "there are objects that match both lhs and rhs of PutNext"
-                    )
-                if instr.objs_next():
-                    raise RejectSampling("objs already next to each other")
-
-                # Check that we are not asking to move an object next to itself
-                move = instr.desc_move
-                fixed = instr.desc_fixed
-                if len(move.obj_set) == 1 and len(fixed.obj_set) == 1:
-                    if move.obj_set[0] is fixed.obj_set[0]:
-                        raise RejectSampling("cannot move an object next to itself")
-
-            if isinstance(instr, ActionInstr):
-                if not hasattr(self, "unblocking") or not self.unblocking:
-                    continue
-                # TODO: either relax this a bit or make the bot handle this super corner-y scenarios
-                # Check that the instruction doesn't involve a key that matches the color of a locked door
-                potential_objects = ("desc", "desc_move", "desc_fixed")
-                for attr in potential_objects:
-                    if hasattr(instr, attr):
-                        obj = getattr(instr, attr)
-                        if obj.type == "key" and obj.color in colors_of_locked_doors:
-                            raise RejectSampling(
-                                "cannot do anything with/to a key that can be used to open a door"
-                            )
-                continue
-
-            if isinstance(instr, SeqInstr):
-                self.validate_instrs(instr.instr_a)
-                self.validate_instrs(instr.instr_b)
-                continue
-
-            if isinstance(instr, GoToGoalInstr):
-                continue
-
-            assert False, "unhandled instruction type"
+        self.instrs_controller.validate_instrs(instrs, self)
         
     def gen_mission(self):
         """
@@ -199,6 +151,13 @@ class MARoomGridLevel(MARoomgrid):
         """
         raise NotImplementedError
     
+    def get_answer(self, question, default_answer='I　dont　know'):
+        """
+        Get an answer (questions and matching environment), return default_answer if not found
+        Derived level classes should implement this method
+        """
+        raise NotImplementedError
+
     @property
     def level_name(self):
         return self.__class__.level_name

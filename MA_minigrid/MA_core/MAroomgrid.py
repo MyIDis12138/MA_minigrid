@@ -24,10 +24,11 @@ def reject_next_to(env: MultiGridEnv, pos: tuple[int, int]):
     return False
 
 class MARoom:
-    def __init__(self, top: tuple[int, int], size: tuple[int, int]):
+    def __init__(self, top: tuple[int, int], size: tuple[int, int], room_id: int):
         # Top-left corner and size (tuples)
         self.top = top
         self.size = size
+        self.room_id = room_id
 
         # List of door objects and door positions
         # Order of the doors is right, down, left, up
@@ -74,7 +75,7 @@ class MARoomgrid(MultiGridEnv):
     """
     def __init__(
         self,
-        agents_index: list[int] = [],
+        agents_colors: list[str] = [],
         room_size: int = 7,
         num_rows: int = 3,
         num_cols: int = 3,
@@ -82,6 +83,7 @@ class MARoomgrid(MultiGridEnv):
         agent_view_size: int = 7,
         **kwargs,
     ):
+        assert len(agents_colors) > 0, "Must specify at least one agent"
         assert room_size > 0
         assert room_size >= 3
         assert num_rows > 0
@@ -98,8 +100,8 @@ class MARoomgrid(MultiGridEnv):
 
         # create the agents
         agents = []
-        for id, i in enumerate(agents_index):
-            agents.append(Agent(id, i, view_size=agent_view_size))
+        for id, c in enumerate(agents_colors):
+            agents.append(Agent(id=id, color=c, view_size=agent_view_size))
         
         super().__init__(
             agents=agents,
@@ -129,11 +131,21 @@ class MARoomgrid(MultiGridEnv):
         assert j < self.num_rows
         return self.room_grid[j][i]
     
+    def get_room_from_id(self, room_id) -> MARoom:
+        for j in range(0, self.num_rows):
+            for i in range(0, self.num_cols):
+                room = self.room_grid[j][i]
+                if room.room_id == room_id:
+                    return room    
+                      
+        raise ValueError("Room id not found")
+
     def _gen_grid(self, width, height):
         # Create the grid
         self.grid = MAGrid(width, height)
 
         self.room_grid = []
+        room_id = 0
 
         # For each row of rooms
         for j in range(0, self.num_rows):
@@ -143,9 +155,11 @@ class MARoomgrid(MultiGridEnv):
             for i in range(0, self.num_cols):
                 room = MARoom(
                     (i * (self.room_size-1), j * (self.room_size-1)),
-                    (self.room_size, self.room_size)
+                    (self.room_size, self.room_size),
+                    room_id,
                 )
                 row.append(room)
+                room_id += 1
 
                 # Generate the walls for this room
                 self.grid.wall_rect(*room.top, *room.size)
@@ -196,22 +210,60 @@ class MARoomgrid(MultiGridEnv):
 
         return obj, pos
     
-    def place_agent_in_room(
-            self, i: int, j: int, agent: Agent
+    def place_in_room_with_id(
+            self, room_id: int, obj: MAWorldObj
     ) -> tuple[MAWorldObj, tuple[int, int]]:
-        room = self.get_room(i, j)
+        """
+        Add an existing object to room (i, j)
+        """
 
-        pos = self.place_agent(
-            agent,
+        room = self.get_room_from_id(room_id=room_id)
+
+        pos = self.place_obj(
+            obj,
             room.top,
             room.size,
             reject_fn=reject_next_to,
             max_tries=1000
         )
 
-        room.agents.append(agent)
+        room.objs.append(obj)
 
-        return agent, pos
+        return obj, pos
+    
+    def place_agent_in_room(
+            self, i: int, j: int, agent_id: int
+    ) -> tuple[MAWorldObj, tuple[int, int]]:
+        room = self.get_room(i, j)
+
+        pos = self.place_agent(
+            agent_id,
+            room.top,
+            room.size,
+            reject_next_to,
+            1000,
+        )
+
+        room.agents.append(self.agents[agent_id])
+
+        return pos
+    
+    def place_agent_in_room_with_id(
+            self, room_id: int, agent_id: int
+    ) -> tuple[MAWorldObj, tuple[int, int]]:
+        room = self.get_room_from_id(room_id=room_id)
+
+        pos = self.place_agent(
+            agent_id,
+            room.top,
+            room.size,
+            reject_fn=reject_next_to,
+            max_tries=1000,
+        )
+
+        room.agents.append(self.agents[agent_id])
+
+        return pos
 
     def add_object(        
         self,
@@ -392,6 +444,8 @@ class MARoomgrid(MultiGridEnv):
         j: int | None = None,
         num_distractors: int = 10,
         all_unique: bool = True,
+        color_set: list[str] | None = None,
+        type_set: list[str] | None = None,
     ) -> list[MAWorldObj]:
         """
         Add random objects that can potentially distract/confuse the agent.
@@ -407,9 +461,15 @@ class MARoomgrid(MultiGridEnv):
         # List of distractors added
         dists = []
 
+        if color_set is None:
+            color_set = COLOR_NAMES
+
+        if type_set is None:
+            type_set = ['key', 'ball', 'box']
+
         while len(dists) < num_distractors:
-            color = self._rand_elem(COLOR_NAMES)
-            type = self._rand_elem(['key', 'ball', 'box'])
+            color = self._rand_elem(color_set)
+            type = self._rand_elem(type_set)
             obj = (type, color)
 
             if all_unique and obj in objs:

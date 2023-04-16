@@ -12,7 +12,8 @@ from minigrid.core.constants import (
     IDX_TO_COLOR,
     IDX_TO_OBJECT,
     OBJECT_TO_IDX,
-    DIR_TO_VEC
+    DIR_TO_VEC,
+    TILE_PIXELS
 )
 from minigrid.utils.rendering import (
     fill_coords,
@@ -27,53 +28,6 @@ if TYPE_CHECKING:
     from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
 
 
-class DoorWID(Door):
-    def __init__(self, color, id, is_open=False, is_locked=False):
-        super(DoorWID, self).__init__(color, is_open, is_locked)
-        self.id = id
-
-    def toggle(self, env, pos):
-        # If the player has the right key to open the door
-        if self.is_locked:
-            if isinstance(env.carrying, KeyWID) and env.carrying.id == self.id:
-                self.is_locked = False
-                self.is_open = True
-                return True
-            return False
-
-        self.is_open = not self.is_open
-        return True
-
-class KeyWID(Key):
-    def __init__(self, id, color='blue'):
-        super(KeyWID, self).__init__(color)
-        self.id = id
-
-    def can_overlap(self):
-        return True
-
-class BoxWID(Box):
-    def __init__(self, color, id, contains=None, locked=True):
-        super(BoxWID, self).__init__(color)
-        self.contains = contains
-        self.is_locked = locked
-        self.id = id
-
-    def can_pickup(self):
-        return True
-
-    def toggle(self, env, pos):
-        if self.is_locked:
-            if isinstance(env.carrying, KeyWID) and env.carrying.id == self.id:
-                self.is_locked = False
-                self.is_open = True
-                return True
-            return False
-        else:
-            # Replace the box by its contents
-            env.grid.set(*pos, self.contains)
-        return True
-    
 class MAWorldObj(WorldObj):
     def __init__(self, type, color):
         super(MAWorldObj, self).__init__(type, color)
@@ -84,7 +38,7 @@ class MAWorldObj(WorldObj):
         """Encode the a description of this object as a 3-tuple of integers"""
         return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
 
-    def toggle(self, env: MultiGridEnv, pos: tuple[int, int]) -> bool:
+    def toggle(self, env: MultiGridEnv, agent: Agent, pos: tuple[int, int]) -> bool:
         """Method to trigger/toggle an action this object performs"""
         return False
 
@@ -126,27 +80,32 @@ class MAWorldObj(WorldObj):
 
 class Agent(MAWorldObj):
     def __init__(
-            self, 
-            id = None,
-            index = 0,
-            direction = 0, 
-            view_size = 7
-        ):
-        assert index >= 0 and index < 6, "index must be between 0 and 5"
-        super(Agent, self).__init__('agent', IDX_TO_COLOR[index])
+        self, 
+        id: int = None,
+        color: str = "red",
+        direction: int = 0, 
+        view_size: int = 7
+    ):
+
+        assert color in COLORS.keys(), "color must be one of %s" % COLORS.keys()
+        super(Agent, self).__init__('agent', color)
+
+        assert id is not None, "id must be specified"
+        self.id = id
+        
         # Number of cells (width and height) in the agent view
         assert view_size % 2 == 1
         assert view_size >= 3
         self.view_size = view_size
         assert direction in [0,1,2,3], "direction must be between 0 and 3"
+        
         self.dir = direction
-        self.id = id or index
-        self.index = index
+        
+        #initial the state
         self.carrying: MAWorldObj | None = None
         self.terminated = False
         self.started = True
         self.paused = False
-        assert id is not None, "id must be specified"
 
     def render(self, img):
         c = COLORS[self.color]
@@ -160,25 +119,33 @@ class Agent(MAWorldObj):
         fill_coords(img, tri_fn, c)
 
     def encode(self):
-        # Encode the agent as a 5-tuple of integers
+        # Encode the agent as a 6-tuple of integers
+        # NB: the agent's id is not encoded
         if self.carrying:
-            return (OBJECT_TO_IDX[self.type], self.index, self.dir, 1, OBJECT_TO_IDX[self.carrying.type], COLOR_TO_IDX[self.carrying.color])
-        return ( OBJECT_TO_IDX[self.type], self.index, self.dir, 0, 0, 0)
+            return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.dir, 1, OBJECT_TO_IDX[self.carrying.type], COLOR_TO_IDX[self.carrying.color])
+        return ( OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.dir, 0, 0, 0)
     
     @staticmethod
-    def decode(index, direction, carrying, carrying_type, carrying_color):
-        v = Agent(index, direction)
+    def decode(color_index, direction, carrying, carrying_type, carrying_color):
+        # Create an agent from a 5-tuple of integers 
+        # NB: the agent's id is not decoded
+        v = Agent(color_index=color_index, direction=direction)
         v.carrying = MAWorldObj.decode(carrying_type, carrying_color, 0) if carrying else None
         return v
     
     def reset(self):
+        """
+        Reset the agent's state.
+        """
         self.terminated = False
         self.started = True
         self.paused = False
+        self.carrying = None
+        
+        # Reset the agent's position and direction, should be set by the environment
         self.dir = None
         self.cur_pos = None
         self.init_pos = None
-        self.carrying = None
 
     @property
     def dir_vec(self):
@@ -300,23 +267,16 @@ class MAFloor(MAWorldObj):
     Colored floor tile the agent can walk over
     """
 
-    def __init__(self, color='blue'):
+    def __init__(self, color: str = 'blue'):
         super().__init__('floor', color)
 
     def can_overlap(self):
         return True
 
-    def render(self, r):
+    def render(self, img):
         # Give the floor a pale color
-        c = COLORS[self.color]
-        r.setLineColor(100, 100, 100, 0)
-        r.setColor(*c/2)
-        r.drawPolygon([
-            (1          , TILE_PIXELS),
-            (TILE_PIXELS, TILE_PIXELS),
-            (TILE_PIXELS,           1),
-            (1          ,           1)
-        ])
+        color = COLORS[self.color] / 2
+        fill_coords(img, point_in_rect(0.031, 1, 0.031, 1), color)
 
 class MALava(MAWorldObj):
     def __init__(self, color='red'):
@@ -326,12 +286,7 @@ class MALava(MAWorldObj):
         return True
 
     def render(self, img):
-        if self.color == 'yellow':
-            c = (255, 128, 0)
-        elif self.color == 'blue':
-            c = (0, 0, 255)
-        else:
-            raise NotImplementedError
+        c = COLORS[self.color]
 
         # Background color
         fill_coords(img, point_in_rect(0, 1, 0, 1), c)
@@ -346,7 +301,7 @@ class MALava(MAWorldObj):
             fill_coords(img, point_in_line(0.7, yhi, 0.9, ylo, r=0.03), (0,0,0))
 
 class MAWall(MAWorldObj):
-    def __init__(self, color='grey'):
+    def __init__(self, color: str = "grey"):
         super().__init__('wall', color)
 
     def see_behind(self):
@@ -368,10 +323,10 @@ class MADoor(MAWorldObj):
     def see_behind(self):
         return self.is_open
 
-    def toggle(self, env, pos):
+    def toggle(self, env, agent, pos):
         # If the player has the right key to open the door
         if self.is_locked:
-            if isinstance(env.carrying, Key) and env.carrying.color == self.color:
+            if isinstance(agent.carrying, Key) and agent.carrying.color == self.color:
                 self.is_locked = False
                 self.is_open = True
                 return True
@@ -381,17 +336,22 @@ class MADoor(MAWorldObj):
         return True
 
     def encode(self):
-        """Encode the a description of this object as a 5-tuple of integers"""
+        """Encode the a description of this object as a 3-tuple of integers"""
 
         # State, 0: open, 1: closed, 2: locked
         if self.is_open:
             state = 0
         elif self.is_locked:
             state = 2
+        # if door is closed and unlocked
         elif not self.is_open:
             state = 1
+        else:
+            raise ValueError(
+                f"There is no possible state encoding for the state:\n -Door Open: {self.is_open}\n -Door Closed: {not self.is_open}\n -Door Locked: {self.is_locked}"
+            )
 
-        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state, self.agent_id, self.agent_dir)
+        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
 
     def render(self, img):
         c = COLORS[self.color]
@@ -419,7 +379,7 @@ class MADoor(MAWorldObj):
 
 class MAKey(MAWorldObj):
     def __init__(self, color='blue'):
-        super(Key, self).__init__('key', color)
+        super().__init__('key', color)
 
     def can_pickup(self):
         return True
@@ -440,7 +400,7 @@ class MAKey(MAWorldObj):
 
 class MABall(MAWorldObj):
     def __init__(self, color='blue'):
-        super(Ball, self).__init__('ball', color)
+        super().__init__('ball', color)
 
     def can_pickup(self):
         return True
@@ -450,7 +410,7 @@ class MABall(MAWorldObj):
 
 class MABox(MAWorldObj):
     def __init__(self, color, contains=None):
-        super(Box, self).__init__('box', color)
+        super().__init__('box', color)
         self.contains = contains
 
     def can_pickup(self):
@@ -466,19 +426,20 @@ class MABox(MAWorldObj):
         # Horizontal slit
         fill_coords(img, point_in_rect(0.16, 0.84, 0.47, 0.53), c)
 
-    def toggle(self, env, pos):
+    def toggle(self, env, agent, pos):
         # Replace the box by its contents
         env.grid.set(*pos, self.contains)
         return True
 
 class MADoorWID(MADoor):
-    def __init__(self, color, is_open=False, is_locked=False):
+    def __init__(self, id, color, is_open=False, is_locked=False):
         super(MADoorWID, self).__init__(color, is_open, is_locked)
+        self.id = id
 
-    def toggle(self, env, pos):
+    def toggle(self, env, agent, pos):
         # If the player has the right key to open the door
         if self.is_locked:
-            if isinstance(env.carrying, MAKeyWID) and env.carrying.id == self.id:
+            if isinstance(agent.carrying, MAKeyWID) and agent.carrying.id == self.id:
                 self.is_locked = False
                 self.is_open = True
                 return True
@@ -498,16 +459,13 @@ class MAKeyWID(MAKey):
 class MABoxWID(MABox):
     def __init__(self, color, id, contains=None, locked=True):
         super(MABoxWID, self).__init__(color)
-        self.contains = contains
-        self.is_locked = locked
         self.id = id
+        self.is_locked = locked
+        self.contains = contains
 
-    def can_pickup(self):
-        return True
-
-    def toggle(self, env, pos):
+    def toggle(self, env, agent, pos):
         if self.is_locked:
-            if isinstance(env.carrying, MAKeyWID) and env.carrying.id == self.id:
+            if isinstance(agent.carrying, MAKeyWID) and agent.carrying.id == self.id:
                 self.is_locked = False
                 self.is_open = True
                 return True

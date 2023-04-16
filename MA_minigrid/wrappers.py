@@ -143,7 +143,8 @@ class SingleAgentWrapper(Wrapper):
         return self.observation(obs)
     
     def step(self, actions):
-        obs, rewards, terminated, truncated, _ = super().step([actions])
-        return self.observation(obs), rewards[0], terminated, truncated, _
+        obs, rewards, terminated, truncated, info = super().step([actions])
+        done = terminated or truncated
+        return self.observation(obs), rewards[0], done, info
     
 

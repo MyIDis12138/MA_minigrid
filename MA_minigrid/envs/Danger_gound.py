@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from MA_minigrid.envs.MAbabyai.core.MAroomgrid_level import MARoomGridLevel
-from MA_minigrid.envs.MAbabyai.core.MA_verifier import GoToGoalInstr
-from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX
 from MA_minigrid.MA_core.objects import MALava, MAGoal, Oracle
 import gymnasium as gym
 
@@ -18,7 +16,7 @@ class DangerGroundEnv(MARoomGridLevel):
         self.agent_start_pos = (2, 1)
         self.oracle_pos = (3, 1)
         super().__init__(
-            agents_index= [0],
+            agents_colors=['red'],
             num_rows=1,
             num_cols=1,
             room_size=room_size,
@@ -39,13 +37,16 @@ class DangerGroundEnv(MARoomGridLevel):
         self.agents[0].cur_pos = self.agent_start_pos
         self.agents[0].dir = 1
         
-        self._gen_mission()
+        self._gen_instr()
 
-    def _gen_mission(self, agent_id = 0):
-        instr_surface = 'avoid danger {}, go to green ball'.format(self.danger_names[self.danger_name_idx])
-        self.instrs_controller.add_instr(instr_str="goal", agent_id=0, surface=instr_surface, goal_pos=self.goal_pos)
+    def _gen_instr(self, agent_id = 0):
+        danger_instr = self.instrs_controller._make_instr("danger_ground", agent_id=agent_id, lava_color=self.lava_colors[self.danger_color_idx], lava_name=self.danger_names[self.danger_name_idx])
+        goal_instr = self.instrs_controller._make_instr("goal", agent_id=agent_id, goal_pos=self.goal_pos)
+        env_instr = self.instrs_controller._make_instr("constriant", agent_id=agent_id, cons_instr=danger_instr, goal_instr=goal_instr)
+        self.instrs_controller.add_instr(instr=env_instr, agent_id=agent_id)
+
         self.useful_answers = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
-        self.missions = {instr_surface: [agent_id]}
+        self.missions = {self.instrs_controller.surface(self, agent_id): [agent_id]}
 
     def _gen_lava(self):
         danger_name_idx= self._rand_int(0, len(self.danger_names))

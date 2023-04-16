@@ -117,6 +117,7 @@ class MultiGridEnv(gym.Env):
         self.tile_size = tile_size
 
         self.window_name = window_name
+        self.mission_text = ""
 
     def reset(self, *, seed=None, options=None)-> tuple[ObsType, dict[str, Any]]:
         # Generate a new random grid at the start of each episode
@@ -131,10 +132,11 @@ class MultiGridEnv(gym.Env):
         self._gen_grid(self.width, self.height) 
         
         # check the agents in the environment
-        for agent in self.agents:
+        for id, agent in enumerate(self.agents):
             assert agent.init_pos is not None
             assert agent.cur_pos is not None
             assert agent.dir is not None
+            assert id == agent.id, f"Agent id {agent.id} specified in the environment does not match the id {id} of the agent in the list of agents"
         
         # Step count since episode start
         self.step_count = 0
@@ -391,23 +393,25 @@ class MultiGridEnv(gym.Env):
 
     def place_agent(
         self, 
-        agent: Agent | None,
+        agent_id: int,
         top:Point = None,
         size: tuple[int, int] = None,
         reject_fn=None,
+        max_tries=math.inf,
         agent_dir: int = -1,
-        max_tries=math.inf
     ):
         """
         Place the agent at an empty position in the grid
         """
-        agent.cur_pos = None
-        pos = self.place_obj(agent, top, size, max_tries=max_tries, reject_fn=reject_fn,layer='agents')
+        assert agent_id < len(self.agents), f'Invalid agent id {agent_id}'
+        self.agents[agent_id].cur_pos = None
+        pos = self.place_obj(self.agents[agent_id], top, size, max_tries=max_tries, reject_fn=reject_fn,layer='agents')
 
         if agent_dir == -1:
             agent_dir = self._rand_int(0, 4)
         assert agent_dir in [0, 1, 2, 3], 'Invalid agent direction'
-        agent.dir = agent_dir
+        self.agents[agent_id].dir = agent_dir
+
         return pos
 
     def agent_sees(self, agent: Agent, x, y):
@@ -488,7 +492,7 @@ class MultiGridEnv(gym.Env):
             # Toggle/activate an object
             elif actions[i] == self.actions.toggle:
                 if fwd_cell and not fwd_agent:
-                    fwd_cell.toggle(self, fwd_pos)
+                    fwd_cell.toggle(self, self.agents[i], fwd_pos)
 
             # Done action (not used by default)
             elif actions[i] == self.actions.done:
@@ -607,7 +611,7 @@ class MultiGridEnv(gym.Env):
             bg = pygame.transform.smoothscale(bg, (self.screen_size, self.screen_size))
 
             font_size = 22
-            text = self.window_name
+            text = self.mission_text
             font = pygame.freetype.SysFont(pygame.font.get_default_font(), font_size)
             text_rect = font.get_rect(text, size=font_size)
             text_rect.center = bg.get_rect().center

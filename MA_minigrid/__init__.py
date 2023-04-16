@@ -9,12 +9,17 @@ def register_SQbabyai_envs():
         id="SQbabyai-DangerGround-v0",
         entry_point="MA_minigrid.envs.Danger_gound:DangerGroundEnv",
     )
-
-def register_SQbabyai_envs():
+    
     register(
         id="SQbabyai-DangerRoom-v0",
         entry_point="MA_minigrid.envs.Danger_room:DangerRoomEnv",
     )
+
+    register(
+        id="SQbabyai-DangerAgent-v0",
+        entry_point="MA_minigrid.envs.Danger_agent:DangerAgentEnv",
+    )
+    
 
 
 register_SQbabyai_envs()

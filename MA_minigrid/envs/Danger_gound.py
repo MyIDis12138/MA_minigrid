@@ -7,7 +7,7 @@ import gymnasium as gym
 import itertools as itt
 
 class DangerGroundEnv(MARoomGridLevel):
-    def __init__(self, room_size=9, call=True):
+    def __init__(self, room_size=7, call=True):
         self.lava_colors = ['yellow', 'blue']
         self.danger_names = ['ground','zone','area']
         self.n_target = 2
@@ -30,7 +30,10 @@ class DangerGroundEnv(MARoomGridLevel):
         self.put_obj(MAGoal('green'), *self.goal_pos)
 
         if not self.call:
-            self._gen_Oracle()
+            self.grid.set(1, 1, None)
+            self.grid.set(2, 1, None)
+            self.grid.set(3, 1, None)
+            self.grid.set(*self.oracle_pos, Oracle(color='red'))
         
         self.grid.set(*self.agent_start_pos, None)
         self.put_obj(self.agents[0], *self.agent_start_pos)
@@ -44,6 +47,9 @@ class DangerGroundEnv(MARoomGridLevel):
         goal_instr = self.instrs_controller._make_instr("goal", agent_id=agent_id, goal_pos=self.goal_pos)
         env_instr = self.instrs_controller._make_instr("constriant", agent_id=agent_id, cons_instr=danger_instr, goal_instr=goal_instr)
         self.instrs_controller.add_instr(instr=env_instr, agent_id=agent_id)
+
+        for agent in self.agents:
+            agent.mission = self.instrs_controller.surface(self, agent.id)
 
         self.useful_answers = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
         self.missions = {self.instrs_controller.surface(self, agent_id): [agent_id]}
@@ -112,17 +118,9 @@ class DangerGroundEnv(MARoomGridLevel):
 
         return danger_color_idx, danger_name_idx
 
-    def _gen_Oracle(self):
-        self.grid.set(1, 1, None)
-        self.grid.set(2, 1, None)
-        self.grid.set(3, 1, None)
-        self.grid.set(*self.oracle_pos, Oracle(color='red'))
-
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == self.danger_names[self.danger_name_idx]:
             return self.useful_answers[0]
         else:
             return default_answer
         
-    def seed(self, seed):
-        pass

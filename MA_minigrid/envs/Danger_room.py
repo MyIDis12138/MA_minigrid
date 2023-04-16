@@ -103,4 +103,3 @@ class DangerRoomEnv(MARoomGridLevel):
             return self.useful_answers[2]
         else:
             return default_answer
-

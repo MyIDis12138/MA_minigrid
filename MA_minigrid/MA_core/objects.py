@@ -106,6 +106,7 @@ class Agent(MAWorldObj):
         self.terminated = False
         self.started = True
         self.paused = False
+        self.mission = None
 
     def render(self, img):
         c = COLORS[self.color]
@@ -142,10 +143,11 @@ class Agent(MAWorldObj):
         self.paused = False
         self.carrying = None
         
-        # Reset the agent's position and direction, should be set by the environment
+        # Reset the agent's position, direction and mission, should be set by the environment
         self.dir = None
         self.cur_pos = None
         self.init_pos = None
+        self.mission = None
 
     @property
     def dir_vec(self):

@@ -28,6 +28,7 @@ ground noun
 enemy noun
 square noun
 door noun
+goal noun
 none adj
 blue adj
 green adj

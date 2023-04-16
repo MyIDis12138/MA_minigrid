@@ -31,6 +31,7 @@ class MAInstrsController:
             "favoriate" : GoToFavoriteInstr,
             "danger_ground" : DangerGroundInstr,
             "danger_room" : DangerRoomInstr,
+            "danger_agent" : DangerAgentInsr,
             "sequence" : MASeqInstr,
             "constriant" : GoalConstrainedInstr,
         }
@@ -50,7 +51,8 @@ class MAInstrsController:
     def verify(self, actions):
         res = []
         for agent_id, action in enumerate(actions):
-            res.append(self.instrs[agent_id].verify(action))
+            if agent_id in self.instrs.keys():
+                res.append(self.instrs[agent_id].verify(action))
         return res
     
     def surface(self, env):
@@ -80,6 +82,8 @@ class MAInstrsController:
             return 1
         elif isinstance(instr, DangerRoomInstr):
             return 1
+        elif isinstance(instr, DangerAgentInsr):
+            return 1
         else:
             raise NotImplementedError(
                 "instr needs to be an instance of PutNextInstr, ActionInstr, or SeqInstr"
@@ -90,7 +94,10 @@ class MAInstrsController:
             instr.update_objs_poss()
 
     def surface(self, env, agent_id):
-        return self.instrs[agent_id].surface(env)
+        if agent_id in self.instrs.keys():
+            return self.instrs[agent_id].surface(env)
+        else:
+            return None
 
     def validate_instrs(self, instrs, env):
         """
@@ -431,6 +438,31 @@ class DangerRoomInstr(MAActionInstr):
         if self._surface:
             return self._surface
         return f"avoid {self.room_name} room"
+
+class DangerAgentInsr(MAActionInstr):
+    """
+    Avoid the danger agent with specific agent id
+    """
+
+    def __init__(self, agent_id, danger_agent_id, radius, surface=None):
+        super().__init__(agent_id=agent_id)
+        self.danger_agent_id = danger_agent_id
+        self.radius = radius
+        self._surface = surface
+
+    def verify_action(self, action):
+        pos = self.env.agents[self.agent_id].cur_pos
+        danger_agent_pos = self.env.agents[self.danger_agent_id].cur_pos
+
+        if np.linalg.norm(np.array(pos)-np.array(danger_agent_pos)) <= self.radius:
+            return "failure"
+
+        return "continue"
+    
+    def surface(self, env):
+        if self._surface:
+            return self._surface
+        return "avoid danger robot"
 
 class GoToGoalInstr(MAActionInstr):
     """

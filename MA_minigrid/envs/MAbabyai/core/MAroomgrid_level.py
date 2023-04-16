@@ -63,7 +63,8 @@ class MARoomGridLevel(MARoomgrid):
 
         mission_text = ""
         for agent in self.agents:
-            mission_text += f"agent {agent.id} mission: " + self.instrs_controller.surface(self, agent.id) + "\n"
+            if agent.mission:
+                mission_text += f"agent {agent.id} mission: " + agent.mission + "\n"
         self.mission_text = mission_text
 
         return obs
@@ -100,6 +101,9 @@ class MARoomGridLevel(MARoomgrid):
             truncated = True
                 
         return obs, rewards, terminated, truncated, info
+    
+    def seed(self, seed=None):
+        pass
     
     def update_objs_poss(self, instr=None):
         if instr is None:
@@ -155,6 +159,12 @@ class MARoomGridLevel(MARoomgrid):
         """
         Get an answer (questions and matching environment), return default_answer if not found
         Derived level classes should implement this method
+        """
+        raise NotImplementedError
+
+    def _gen_instr(self, agent_id):
+        """
+        Generate a single instruction
         """
         raise NotImplementedError
 

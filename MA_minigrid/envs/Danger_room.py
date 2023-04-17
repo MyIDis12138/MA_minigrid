@@ -91,6 +91,8 @@ class DangerRoomEnv(MARoomGridLevel):
                     '{} {} in room{}'.format(self.obj.color, self.obj.type, fav_room_id ),
                     '{} room is room{}'.format(self.rand_names[1], danger_room_id), ]
         
+        for agent in self.agents:
+            agent.mission = self.instrs_controller.surface(self, agent.id)
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
 
     # map the question to the answer

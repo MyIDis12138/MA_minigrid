@@ -14,6 +14,7 @@ class ManualControl:
     def __init__(
         self,
         env: Env,
+        question_set: list[str] = None,
         seed: int=None,
         key_to_action=None,
     ) -> None:
@@ -26,6 +27,7 @@ class ManualControl:
         self.env = env
         self.seed = seed
         self.closed = False
+        self.question_set = question_set
         if key_to_action is None:
             self.key_to_action = {
                 "a": Actions.left,
@@ -69,6 +71,9 @@ class ManualControl:
     def reset(self, seed=None):
         self.env.reset()
         self.env.render()
+        if self.question_set:
+            for question in self.question_set:
+                obs, reward, done, info = self.env.step(question)
 
     def key_handler(self, event):
         key: str = event.key

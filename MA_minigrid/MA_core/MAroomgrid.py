@@ -96,7 +96,7 @@ class MARoomgrid(MultiGridEnv):
         width = (room_size - 1) * num_cols + 1
 
         # By default, this environment has no mission
-        self.missions = []
+        self.missions = {}
 
         # create the agents
         agents = []

@@ -11,9 +11,6 @@ import numpy as np
 from gymnasium import logger, spaces
 from gymnasium.core import ObservationWrapper, ObsType, Wrapper
 
-from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
-from MA_minigrid.MA_core.objects import MAGoal
-
 class SignalObsWrapper(ObservationWrapper):
     """
     Use the first observation in the list as the only observation output.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from MA_minigrid.MA_core.MAroomgrid import MARoom
 from MA_minigrid.envs.MAbabyai.core.MAroomgrid_level import MARoomGridLevel
-from minigrid.core.constants import COLOR_NAMES
+from MA_minigrid.MA_core.MAconstants import COLOR_NAMES
 from minigrid.envs.babyai.core.verifier import (
     LOC_NAMES,
     OBJ_TYPES,

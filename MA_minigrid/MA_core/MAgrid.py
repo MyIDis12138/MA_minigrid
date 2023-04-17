@@ -1,27 +1,76 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any, Tuple
 
-from minigrid.core.grid import Grid, downsample, highlight_img, fill_coords, point_in_rect
-from minigrid.core.constants import OBJECT_TO_IDX, TILE_PIXELS
+from typing import Any, Callable
 
+from minigrid.utils.rendering import downsample, highlight_img, fill_coords, point_in_rect
+
+from MA_minigrid.MA_core.MAconstants import OBJECT_TO_IDX, TILE_PIXELS
 from MA_minigrid.MA_core.objects import Agent, MAWorldObj, MAWall
 
-Point = Tuple[int, int]
 
 # Multi-agent base grid
-class MAGrid(Grid):
-    # Grid for multi-agent environments
-    def __init__(self, width, height):
+class MAGrid:
+    """
+    Represent a grid and operations on it
+    """
+
+    # Static cache of pre-renderer tiles
+    tile_cache: dict[tuple[Any, ...], Any] = {}
+
+    def __init__(self, width: int, height: int):
         assert width >= 3
         assert height >= 3
 
-        self.width = width
-        self.height = height
+        self.width: int = width
+        self.height: int = height
         
-        self.agent_grid = [None] * width * height
-        self.grid = [None] * width * height
+        self.grid: list[MAWorldObj | None] = [None] * (width * height)
+        self.agent_grid: list[Agent | None] = [None] * (width * height)
+
+    def __contains__(self, key: Any) -> bool:
+        if isinstance(key, MAWorldObj):
+            for e in self.grid:
+                if e is key:
+                    return True
+        elif isinstance(key, tuple):
+            for e in self.grid:
+                if e is None:
+                    continue
+                if (e.color, e.type) == key:
+                    return True
+                if key[0] is None and key[1] == e.type:
+                    return True
+        return False
+    
+    def __eq__(self, other: MAGrid) -> bool:
+        grid1 = self.encode()
+        grid2 = other.encode()
+        return np.array_equal(grid2, grid1)
+    
+    def __ne__(self, other: MAGrid) -> bool:
+        return not self == other
+    
+    def copy(self) -> MAGrid:
+        from copy import deepcopy
+
+        return deepcopy(self)
+    
+    def set(self, i: int, j: int, v: MAWorldObj | None):
+        assert (
+            0 <= i < self.width
+        ), f"column index {i} outside of grid of width {self.width}"
+        assert (
+            0 <= j < self.height
+        ), f"row index {j} outside of grid of height {self.height}"
+        self.grid[j * self.width + i] = v
+
+    def get(self, i: int, j: int) -> MAWorldObj | None:
+        assert 0 <= i < self.width
+        assert 0 <= j < self.height
+        assert self.grid is not None
+        return self.grid[j * self.width + i]
     
     def set_agent(self, i: int, j: int, v: Agent | None):
         assert (
@@ -49,18 +98,90 @@ class MAGrid(Grid):
         assert self.agent_grid is not None
         return self.agent_grid[j * self.width + i]
 
+    def horz_wall(
+        self, 
+        x: int, 
+        y: int, 
+        length: int | None = None, 
+        obj_type: Callable[[], MAWorldObj] = MAWall,
+    ):
+        if length is None:
+            length = self.width - x
+        for i in range(0, length):
+            self.set(x + i, y, obj_type())
+
+    def vert_wall(
+        self,
+        x: int,
+        y: int,
+        length: int | None = None,
+        obj_type: Callable[[], MAWorldObj] = MAWall,
+    ):
+        if length is None:
+            length = self.height - y
+        for j in range(0, length):
+            self.set(x, y + j, obj_type())
+
+    def wall_rect(self, x: int, y: int, w: int, h: int):
+        self.horz_wall(x, y, w)
+        self.horz_wall(x, y + h - 1, w)
+        self.vert_wall(x, y, h)
+        self.vert_wall(x + w - 1, y, h)
+
+    def rotate_left(self) -> MAGrid:
+        """
+        Rotate the grid to the left (counter-clockwise)
+        """
+
+        grid = MAGrid(self.height, self.width)
+
+        for i in range(self.width):
+            for j in range(self.height):
+                v = self.get(i, j)
+                w = self.get_agent(i, j)
+                grid.set(j, grid.height - 1 - i, v)
+                grid.set_agent(j, grid.height - 1 - i, w)
+
+        return grid
+
+    def slice(self, topX: int, topY: int, width: int, height: int) -> MAGrid:
+        """
+        Get a subset of the grid
+        """
+
+        grid = MAGrid(width, height)
+
+        for j in range(0, height):
+            for i in range(0, width):
+                x = topX + i
+                y = topY + j
+
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    v = self.get(x, y)
+                    w = self.get_agent(x, y)
+                else:
+                    v = MAWall()
+                    w = None
+
+                grid.set(i, j, v)
+                grid.set_agent(i, j, w)
+
+        return grid
+
     @classmethod
     def render_tile(
         cls, 
         obj: MAWorldObj | None = None,
         agent: Agent | None = None,
         highlights: bool = False, 
-        tile_size: int=TILE_PIXELS, 
-        subdivs: int=3
-    ):
+        tile_size: int = TILE_PIXELS, 
+        subdivs: int = 3
+    ) -> np.ndarray:
         """
         Render a tile and cache the result
         """
+
+        # Hash map lookup key for the cache
         key: tuple[Any, ...] = (highlights, tile_size)
         key = obj.encode() + key if obj else key
         key = agent.encode() + key if agent else key
@@ -103,6 +224,7 @@ class MAGrid(Grid):
         :param r: target renderer object
         :param tile_size: tile size in pixels
         """
+        
         if highlight_mask is None:
             highlight_mask = np.zeros(shape=(self.width, self.height), dtype=bool)
         
@@ -134,10 +256,11 @@ class MAGrid(Grid):
 
         return img
 
-    def encode(self, vis_mask=None):
+    def encode(self, vis_mask: np.ndarray| None = None) -> np.ndarray:
         """
         Produce a compact numpy encoding of the grid
         """
+
         if vis_mask is None:
             vis_mask = np.ones((self.width, self.height), dtype=bool)
         
@@ -147,69 +270,26 @@ class MAGrid(Grid):
             for j in range(self.height):
                 assert vis_mask is not None
                 if vis_mask[i, j]:
-                    v = self.get(i, j)   
+                    v = self.get(i, j)
+
                     if v is None:
-                        array[0] = OBJECT_TO_IDX['empty']
+                        array[i, j, 0] = OBJECT_TO_IDX['empty']
+                        array[i, j, 1] = 0
+                        array[i, j, 2] = 0
                     else:
-                        array[..., 0:3] = v.encode()
+                        array[i, j][0:3] = v.encode()
 
                     w = self.get_agent(i, j)
+
                     if w is None:
-                        array[3]= OBJECT_TO_IDX['empty']
+                        array[i, j, 3]= OBJECT_TO_IDX['empty']
                     else:
-                        array[..., 3:] = w.encode()
+                        array[i, j][3:] = w.encode()
 
         return array
 
-    
-    def slice(self, topX, topY, width, height):
-        """
-        Get a subset of the grid
-        """
-
-        grid = MAGrid(width, height)
-
-        for j in range(0, height):
-            for i in range(0, width):
-                x = topX + i
-                y = topY + j
-
-                if x >= 0 and x < self.width and \
-                        y >= 0 and y < self.height:
-                    v = self.get(x, y)
-                    w = self.get_agent(x, y)
-                else:
-                    v = MAWall()
-                    w = None
-
-                grid.set(i, j, v)
-                grid.set_agent(i, j, w)
-
-        return grid
-    
-    def rotate_left(self):
-        """
-        Rotate the grid to the left (counter-clockwise)
-        """
-
-        grid = MAGrid(self.height, self.width)
-
-        for i in range(self.width):
-            for j in range(self.height):
-                v = self.get(i, j)
-                grid.set(j, grid.height - 1 - i, v)
-                w = self.get_agent(i, j)
-                grid.set_agent(j, grid.height - 1 - i, w)
-        return grid
-    
-    def horz_wall(self, x, y, length=None, obj_type=MAWall):
-        return super().horz_wall(x, y, length, obj_type)
-
-    def vert_wall(self, x, y, length=None, obj_type=MAWall):
-        return super().vert_wall(x, y, length, obj_type)
-
     @staticmethod
-    def decode(array: np.ndarray):
+    def decode(array: np.ndarray) -> tuple[MAGrid, np.ndarray]:
         """
         Decode an array grid encoding back into a grid
         """
@@ -223,17 +303,14 @@ class MAGrid(Grid):
         for i in range(width):
             for j in range(height):
                 embedding = array[i, j]
-                v = MAWorldObj.decode(*embedding[:3])
+                v, w = MAWorldObj.decode(embedding)
                 grid.set(i, j, v)
-                grid.set_agent(i, j, None)
-                if embedding[3] == OBJECT_TO_IDX['agent']:
-                    w = Agent.decode(*embedding[4:])
-                    grid.set_agent(i, j, w)
+                grid.set_agent(i, j, w)
                 vis_mask[i, j] = (embedding[0] != OBJECT_TO_IDX['unseen']) 
 
         return grid, vis_mask
-
-    def process_vis(self, agent_pos: tuple[int, int]) -> np.ndarray:
+    
+    def process_vis(self, agent_pos: tuple[int, int], agent_id: int) -> np.ndarray:
         mask = np.zeros(shape=(self.width, self.height), dtype=bool)
 
         mask[agent_pos[0], agent_pos[1]] = True
@@ -248,7 +325,7 @@ class MAGrid(Grid):
                     continue
 
                 agent = self.get_agent(i, j)
-                if agent and not agent.see_behind():
+                if agent and agent.id != agent_id:
                     continue
 
                 mask[i + 1, j] = True
@@ -265,7 +342,7 @@ class MAGrid(Grid):
                     continue
 
                 agent = self.get_agent(i, j)
-                if agent and not agent.see_behind():
+                if agent and agent.id != agent_id:
                     continue
 
                 mask[i - 1, j] = True

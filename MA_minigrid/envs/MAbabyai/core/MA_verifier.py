@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from minigrid.envs.babyai.core.roomgrid_level import RejectSampling
-from minigrid.core.constants import COLOR_NAMES, DIR_TO_VEC
+from MA_minigrid.MA_core.MAconstants import COLOR_NAMES, DIR_TO_VEC
 from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
-from minigrid.envs.babyai.core.verifier import dot_product, pos_next_to
+from minigrid.envs.babyai.core.verifier import dot_product
 
 # Object types we are allowed to describe in language
 OBJ_TYPES = ["box", "ball", "key", "door"]
@@ -303,7 +303,7 @@ class MAInstr(ABC):
         potential_objects = ("desc", "desc_move", "desc_fixed")
         for attr in potential_objects:
             if hasattr(self, attr):
-                getattr(self, attr).find_matching_objs(self.env, use_location=False)
+                getattr(self, attr).find_matching_objs(self.env, self.agent_id, use_location=False)
 
 class MAActionInstr(MAInstr):
     """
@@ -508,15 +508,18 @@ class GoToFavoriteInstr(MAActionInstr):
         self._surface = surface
         self.agent_id = agent_id
 
+    def reset_verifier(self, env):
+        super().reset_verifier(env)
+        self.desc.find_matching_objs(self.env, self.agent_id)
+
     def surface(self, env):
         if self._surface:
             return self._surface
         return f"go to {self.name} favorite toy"
 
     def verify_action(self, action):
-        _, poss = self.desc.find_matching_objs(self.env, self.agent_id)
 
-        for pos in poss:
+        for pos in self.desc.obj_poss:
             # If the agent is next to (and facing) the object
             if np.array_equal(pos, self.env.agents[self.agent_id].front_pos):
                 return "success"

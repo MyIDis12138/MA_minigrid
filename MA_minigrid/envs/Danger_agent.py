@@ -29,7 +29,8 @@ class DangerAgentEnv(MARoomGridLevel):
             num_cols=1,
             room_size=room_size, 
             agent_view_size=view_size,
-            highlight=False,
+            highlight=True,
+            highlight_agents=[0]
         )
         self.call = call
         self.radius = radius

@@ -4,17 +4,16 @@ from typing import TYPE_CHECKING, Tuple
 
 import math
 import numpy as np
-from minigrid.core.world_object import *
 
-from minigrid.core.constants import (
+from MA_minigrid.MA_core.MAconstants import (
     COLOR_TO_IDX,
     COLORS,
     IDX_TO_COLOR,
     IDX_TO_OBJECT,
     OBJECT_TO_IDX,
     DIR_TO_VEC,
-    TILE_PIXELS
 )
+
 from minigrid.utils.rendering import (
     fill_coords,
     point_in_circle,
@@ -27,36 +26,64 @@ from minigrid.utils.rendering import (
 if TYPE_CHECKING:
     from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
 
+Point = Tuple[int, int]
 
-class MAWorldObj(WorldObj):
-    def __init__(self, type, color):
-        super(MAWorldObj, self).__init__(type, color)
-        self.id = None
-        self.agent_on = None
+class MAWorldObj:
+    def __init__(self, type: str, color: str, id: int | None = None):
+        assert type in OBJECT_TO_IDX, type
+        assert color in COLOR_TO_IDX, color
+        self.id = id
+        self.color = color
+        self.type = type
+        self.contains = None
 
-    def encode(self):
-        """Encode the a description of this object as a 3-tuple of integers"""
-        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
+        # Initial position of the object
+        self.init_pos: Point | None = None
 
+        # Current position of the object
+        self.cur_pos: Point | None = None
+
+    def can_overlap(self) -> bool:
+        """Can the agent overlap with this?"""
+        return False
+
+    def can_pickup(self) -> bool:
+        """Can the agent pick this up?"""
+        return False
+
+    def can_contain(self) -> bool:
+        """Can this contain another object?"""
+        return False
+
+    def see_behind(self) -> bool:
+        """Can the agent see behind this object?"""
+        return True
+    
     def toggle(self, env: MultiGridEnv, agent: Agent, pos: tuple[int, int]) -> bool:
         """Method to trigger/toggle an action this object performs"""
         return False
 
+    def encode(self) -> tuple[int, int, int]:
+        """Encode the a description of this object as a 3-tuple of integers"""
+        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
+
     @staticmethod
-    def decode(type_idx, color_idx, state):
+    def decode(embedding: tuple) -> MAWorldObj:
         """Create an object from a 9-tuple state description"""
 
-        obj_type = IDX_TO_OBJECT[type_idx]
-        color = IDX_TO_COLOR[color_idx]
+        obj_type = IDX_TO_OBJECT[embedding[0]]
+        color = IDX_TO_COLOR[embedding[1]]
 
-        if obj_type == 'empty' or obj_type == 'unseen':
-            return None
+        if obj_type == 'unseen':
+            return None, None
 
         # State, 0: open, 1: closed, 2: locked
-        is_open = state == 0
-        is_locked = state == 2
+        is_open = embedding[2] == 0
+        is_locked = embedding[2] == 2
 
-        if obj_type == 'wall':
+        if obj_type == 'empty':
+            v = None
+        elif obj_type == 'wall':
             v = MAWall(color)
         elif obj_type == 'floor':
             v = MAFloor(color)
@@ -74,9 +101,14 @@ class MAWorldObj(WorldObj):
             v = MALava(color)
         else:
             assert False, "unknown object type in decode '%s'" % obj_type
+        
+        w = Agent.decode(*embedding[3:])
+        
+        return v, w
 
-        return v
-
+    def render(self, r: np.ndarray) -> np.ndarray:
+        """Draw this object with the given renderer"""
+        raise NotImplementedError
 
 class Agent(MAWorldObj):
     def __init__(
@@ -127,11 +159,15 @@ class Agent(MAWorldObj):
         return ( OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.dir, 0, 0, 0)
     
     @staticmethod
-    def decode(color_index, direction, carrying, carrying_type, carrying_color):
-        # Create an agent from a 5-tuple of integers 
-        # NB: the agent's id is not decoded
-        v = Agent(color_index=color_index, direction=direction)
-        v.carrying = MAWorldObj.decode(carrying_type, carrying_color, 0) if carrying else None
+    def decode(type, color_index, direction, carrying, carrying_type, carrying_color):
+        obj_type = IDX_TO_OBJECT[type]
+        if obj_type == 'empty':
+            v = None
+        elif obj_type == 'agent':
+            v = Agent(color_index=color_index, direction=direction)
+            v.carrying = MAWorldObj.decode(carrying_type, carrying_color, 0) if carrying else None
+        else:
+            assert False, "unknown object type in decode '%s'" % type
         return v
     
     def reset(self):
@@ -478,7 +514,7 @@ class MABoxWID(MABox):
         return True
     
 
-class Oracle(Ball):
+class Oracle(MABall):
     def __init__(self, color):
         super().__init__(color)
 

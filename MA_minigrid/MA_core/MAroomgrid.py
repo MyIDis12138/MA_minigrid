@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from minigrid.core.constants import COLOR_NAMES
-from minigrid.core.mission import MissionSpace
-from .MAgrid import MAGrid
-from .objects import MABall, MABox, MADoor, MAKey, MAWorldObj, Agent
-from .MAminigrid import MultiGridEnv
+from MA_minigrid.MA_core.MAconstants import COLOR_NAMES
+from MA_minigrid.MA_core.MAgrid import MAGrid
+from MA_minigrid.MA_core.objects import MABall, MABox, MADoor, MAKey, MAWorldObj, Agent
+from MA_minigrid.MA_core.MAminigrid import MultiGridEnv
 
 def reject_next_to(env: MultiGridEnv, pos: tuple[int, int]):
     """

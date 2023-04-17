@@ -59,8 +59,8 @@ map = {
 
 if __name__ == "__main__":
     #env_name = 'SQbabyai-DangerGround-v0'
-    #env_name = 'SQbabyai-DangerRoom-v0'
-    env_name = 'SQbabyai-DangerAgent-v0'
+    env_name = 'SQbabyai-DangerRoom-v0'
+    #env_name = 'SQbabyai-DangerAgent-v0'
     env = gym.make(env_name)
     env = SingleAgentWrapper(env)
     env = MultiGrid_Safety_Query(env, verbose=True)

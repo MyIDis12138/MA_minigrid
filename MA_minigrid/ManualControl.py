@@ -61,6 +61,8 @@ class ManualControl:
 
     def step(self, action: Actions):
         obs, reward, done, info = self.env.step(action)
+        self.env.render()
+        #print(self.env.__str__)
         print(f"step={self.env.step_count}, reward={reward:.2f}, info={info}")
         if done:
             print("done!")

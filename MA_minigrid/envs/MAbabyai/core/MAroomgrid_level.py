@@ -5,16 +5,8 @@ import numpy as np
 from MA_minigrid.MA_core.RewardType import RewardType
 from MA_minigrid.MA_core.MAroomgrid import MARoomgrid, Agent
 from MA_minigrid.envs.MAbabyai.core.MA_verifier import MASeqInstr, MAInstrsController
-from minigrid.minigrid_env import MissionSpace
 from minigrid.envs.babyai.core.roomgrid_level import BabyAIMissionSpace, RejectSampling
-from minigrid.envs.babyai.core.verifier import (
-    ActionInstr,
-    AfterInstr,
-    AndInstr,
-    BeforeInstr,
-    PutNextInstr,
-    SeqInstr,
-)
+
 
 class MARoomGridLevel(MARoomgrid):
     """

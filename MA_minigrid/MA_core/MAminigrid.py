@@ -14,11 +14,11 @@ from gymnasium import spaces
 from gymnasium.core import ActType, ObsType
 
 from minigrid.core.actions import Actions
-from minigrid.core.constants import COLOR_NAMES, TILE_PIXELS, OBJECT_TO_IDX
 from minigrid.core.mission import MissionSpace
-from .MAgrid import MAGrid
-from .RewardType import RewardType
-from .objects import MAWorldObj, Agent, Point
+from MA_minigrid.MA_core.MAgrid import MAGrid
+from MA_minigrid.MA_core.RewardType import RewardType
+from MA_minigrid.MA_core.objects import MAWorldObj, Agent, Point
+from MA_minigrid.MA_core.MAconstants import COLOR_NAMES, TILE_PIXELS, OBJECT_TO_IDX
 
 T = TypeVar("T")
 
@@ -46,6 +46,7 @@ class MultiGridEnv(gym.Env):
         render_mode: str | None = 'human',
         screen_size: int | None = 640,
         highlight: bool = True,
+        highlight_agents: List[int] = None,
         tile_size: int = TILE_PIXELS,
         agent_view_size: int = 7,
         partial_obs=True,
@@ -117,6 +118,9 @@ class MultiGridEnv(gym.Env):
         # Rendering attributes
         self.render_mode = render_mode
         self.highlight = highlight
+        if highlight_agents is None:
+            highlight_agents = [agent.id for agent in self.agents]
+        self.highlight_agents = highlight_agents
         self.tile_size = tile_size
 
         self.window_name = window_name
@@ -174,50 +178,51 @@ class MultiGridEnv(gym.Env):
         A grid cell is represented by 2-character string, the first one for
         the object and the second one for the color.
         """
+
         # Map of object types to short string
         OBJECT_TO_STR = {
-            'wall': 'W',
-            'floor': 'F',
-            'door': 'D',
-            'key': 'K',
-            'ball': 'A',
-            'box': 'B',
-            'goal': 'G',
-            'lava': 'V',
+            "wall": "W",
+            "floor": "F",
+            "door": "D",
+            "key": "K",
+            "ball": "A",
+            "box": "B",
+            "goal": "G",
+            "lava": "V",
         }
-        # Short string for opened door
-        OPENDED_DOOR_IDS = "__"
+
         # Map agent's direction to short string
-        AGENT_DIR_TO_STR = {
-            0: '>',
-            1: 'V',
-            2: '<',
-            3: '^'
-        }
-        
-        output = ''
-        
+        AGENT_DIR_TO_STR = {0: ">", 1: "V", 2: "<", 3: "^"}
+
+        output = ""
+
         for j in range(self.grid.height):
             for i in range(self.grid.width):
-                if self.gird.get_agent(i, j):
-                    str += 2 * AGENT_DIR_TO_STR[self.grid.get_agent(i, j).dir]
+                agent = self.grid.get_agent(i, j)
+                if agent is not None:
+                    output += AGENT_DIR_TO_STR[agent.dir] + agent.color[0].upper()
                     continue
-                c = self.grid.get(i, j)
-                if c == None:
-                    str += '  '
+
+                tile = self.grid.get(i, j)
+
+                if tile is None:
+                    output += "  "
                     continue
-                if c.type == 'door':
-                    if c.is_open:
-                        str += OPENDED_DOOR_IDS
-                    elif c.is_locked:
-                        str += 'L' + c.color[0].upper()
+
+                if tile.type == "door":
+                    if tile.is_open:
+                        output += "__"
+                    elif tile.is_locked:
+                        output += "L" + tile.color[0].upper()
                     else:
-                        str += 'D' + c.color[0].upper()
+                        output += "D" + tile.color[0].upper()
                     continue
-                str += OBJECT_TO_STR[c.type] + c.color[0].upper()
+
+                output += OBJECT_TO_STR[tile.type] + tile.color[0].upper()
+
             if j < self.grid.height - 1:
-                str += '\n'
-        
+                output += "\n"
+
         return output
 
     @abstractmethod
@@ -532,9 +537,9 @@ class MultiGridEnv(gym.Env):
         for agent in self.agents:
             topX, topY, botX, botY = agent.get_view_exts(agent_view_size)
 
-            agent_view_size = agent_view_size or agent.view_size
+            agent_view_size = agent_view_size or self.agent_view_size
 
-            grid = self.grid.slice(topX, topY, agent.view_size, agent_view_size)
+            grid = self.grid.slice(topX, topY, agent_view_size, agent_view_size)
             for i in range(agent.dir + 1):
                 grid = grid.rotate_left()
             
@@ -542,7 +547,7 @@ class MultiGridEnv(gym.Env):
             # Note that this incurs some performance cost
             if not self.see_through_walls:
                 vis_mask = grid.process_vis(
-                    agent_pos=(agent_view_size // 2, agent_view_size -1)
+                    agent_pos=(agent_view_size // 2, agent_view_size -1), agent_id=agent.id
                 )
             else:
                 vis_mask = np.ones(shape=(grid.width, grid.height), dtype=np.bool)
@@ -641,7 +646,8 @@ class MultiGridEnv(gym.Env):
         highlight_masks = np.zeros((self.width, self.height), dtype=bool)
 
         # For each cell in the visibility mask
-        for i, a in enumerate(self.agents):
+        for i in self.highlight_agents:
+            a = self.agents[i]
             f_vec = a.dir_vec
             r_vec = a.right_vec
             top_left = a.cur_pos + f_vec * (a.view_size - 1) - r_vec * (a.view_size // 2)

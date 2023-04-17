@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import numpy as np
+
+from MA_minigrid.MA_core.RewardType import RewardType
 from MA_minigrid.MA_core.MAroomgrid import MARoomgrid, Agent
-from MA_minigrid.envs.MAbabyai.core.MA_verifier import GoToGoalInstr, MAInstrsController
+from MA_minigrid.envs.MAbabyai.core.MA_verifier import MASeqInstr, MAInstrsController
 from minigrid.minigrid_env import MissionSpace
 from minigrid.envs.babyai.core.roomgrid_level import BabyAIMissionSpace, RejectSampling
 from minigrid.envs.babyai.core.verifier import (
@@ -80,7 +83,7 @@ class MARoomGridLevel(MARoomgrid):
         # If we've successfully completed the mission
         status = True
         status = self.instrs_controller.verify(actions)
-        rewards = []
+        rewards = np.zeros(len(self.agents))
 
         info['success'] = False
         for id, s in enumerate(status):
@@ -93,7 +96,11 @@ class MARoomGridLevel(MARoomgrid):
                 self.agents[id].terminated = True
             elif status == 'continue':
                 self.agents[id].terminated = False
-            rewards.append(reward)
+            
+            if self.reward_type == RewardType.GLOBAL:
+                rewards += reward
+            elif self.reward_type == RewardType.INDIVIDUAL:
+                rewards[id] = reward
 
         terminated = all([agent.terminated for agent in self.agents])
 
@@ -109,9 +116,7 @@ class MARoomGridLevel(MARoomgrid):
         if instr is None:
             instr = self.instrs_controller
         if (
-            isinstance(instr, BeforeInstr)
-            or isinstance(instr, AndInstr)
-            or isinstance(instr, AfterInstr)
+            isinstance(instr, MASeqInstr)
         ):
             self.update_objs_poss(instr.instr_a)
             self.update_objs_poss(instr.instr_b)

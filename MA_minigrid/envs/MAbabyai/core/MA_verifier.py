@@ -53,6 +53,8 @@ class MAInstrsController:
         for agent_id, action in enumerate(actions):
             if agent_id in self.instrs.keys():
                 res.append(self.instrs[agent_id].verify(action))
+            else:
+                res.append("continue")
         return res
     
     def surface(self, env):

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import numpy as np
-from minigrid.core.grid import *
+from typing import Any, Tuple
+
+from minigrid.core.grid import Grid, downsample, highlight_img, fill_coords, point_in_rect
 from minigrid.core.constants import OBJECT_TO_IDX, TILE_PIXELS
-from .objects import *
+
+from MA_minigrid.MA_core.objects import Agent, MAWorldObj, MAWall
 
 Point = Tuple[int, int]
 
@@ -140,29 +143,21 @@ class MAGrid(Grid):
         
         array = np.zeros((self.width, self.height, 9), dtype='uint8')
 
-        assert vis_mask is not None
         for i in range(self.width):
             for j in range(self.height):
+                assert vis_mask is not None
                 if vis_mask[i, j]:
                     v = self.get(i, j)   
-                    encoding_v = []
                     if v is None:
-                        encoding_v.append(OBJECT_TO_IDX['empty'])
-                        encoding_v.append(0)
-                        encoding_v.append(0)
+                        array[0] = OBJECT_TO_IDX['empty']
                     else:
-                        encoding_v = v.encode()
+                        array[..., 0:3] = v.encode()
 
                     w = self.get_agent(i, j)
-                    encoding_w = []
                     if w is None:
-                        encoding_w.append(OBJECT_TO_IDX['empty'])
-                        for _ in range(5):
-                            encoding_w.append(0)
+                        array[3]= OBJECT_TO_IDX['empty']
                     else:
-                        encoding_w = w.encode()
-
-                    array[i, j, :] = list(encoding_v) + list(encoding_w)
+                        array[..., 3:] = w.encode()
 
         return array
 

@@ -52,7 +52,7 @@ class DangerGroundEnv(MARoomGridLevel):
             agent.mission = self.instrs_controller.surface(self, agent.id)
 
         self.useful_answers = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
-        self.missions = {self.instrs_controller.surface(self, agent_id): [agent_id]}
+        self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
 
     def _gen_lava(self):
         danger_name_idx= self._rand_int(0, len(self.danger_names))

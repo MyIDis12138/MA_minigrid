@@ -18,21 +18,20 @@ class DangerAgentEnv(MARoomGridLevel):
             room_size=9,
             view_size=7
     ):
-        self.call = call
-        self.radius = radius
         self.robot_action = [Actions.left, Actions.right, Actions.forward, Actions.done]
+        self.robot_colors = self._rand_subset(['yellow', 'green', 'blue'], 2)
         self.action_fwd = [0.1, 0.1, 0.3, 0.5]
         self.action_turn = [0.2, 0.2, 0.1, 0.5]
-        self.robot_colors = self._rand_subset(['yellow', 'green', 'blue'], 2)
-        self.goal_pos = (room_size - 2, room_size - 2)
         super().__init__(
             agents_colors=["red"]+self.robot_colors,
             num_rows=1,
             num_cols=1,
             room_size=room_size, 
             agent_view_size=view_size,
-            num_missions=1,
         )
+        self.call = call
+        self.radius = radius
+        self.goal_pos = (room_size - 2, room_size - 2)
         
     def gen_mission(self):
         # place the oracle
@@ -67,7 +66,11 @@ class DangerAgentEnv(MARoomGridLevel):
             agent.mission = self.instrs_controller.surface(self, agent.id)
 
         self.useful_answers = ['danger robot is {}'.format(self.robot_colors[0])]
-        self.missions = {self.instrs_controller.surface(self, agent_id): [agent_id]}
+        self.missions = {
+            0: self.instrs_controller.surface(self, agent_id),
+            1: "robot with no mission",
+            2: "robot with no mission"
+        }
 
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == 'robot':
@@ -75,18 +78,18 @@ class DangerAgentEnv(MARoomGridLevel):
         else:
             return default_answer
 
-    def step(self, action):
-        actions = []
-        actions += action
-        for i in range(2):
-            fwd_cell = self.grid.get(*self.agents[i+1].front_pos)
-            if fwd_cell is None:
-                actions.append(random.choices(self.robot_action, weights=self.action_fwd, k=1)[0])
-            else:
-                actions.append(random.choices(self.robot_action, weights=self.action_turn, k=1)[0])     
+    # def step(self, action):
+    #     actions = []
+    #     actions += action
+    #     for i in range(2):
+    #         fwd_cell = self.grid.get(*self.agents[i+1].front_pos)
+    #         if fwd_cell is None:
+    #             actions.append(random.choices(self.robot_action, weights=self.action_fwd, k=1)[0])
+    #         else:
+    #             actions.append(random.choices(self.robot_action, weights=self.action_turn, k=1)[0])     
         
-        obs, reward, terminated, truncated, info = super().step(actions)
-        if self.agents[0].terminated:
-            terminated = True
+    #     obs, reward, terminated, truncated, info = super().step(actions)
+    #     if self.agents[0].terminated:
+    #         terminated = True
 
-        return obs, reward, terminated, truncated, info
+    #     return obs, reward, terminated, truncated, info

@@ -17,6 +17,7 @@ from minigrid.core.actions import Actions
 from minigrid.core.constants import COLOR_NAMES, TILE_PIXELS, OBJECT_TO_IDX
 from minigrid.core.mission import MissionSpace
 from .MAgrid import MAGrid
+from .RewardType import RewardType
 from .objects import MAWorldObj, Agent, Point
 
 T = TypeVar("T")
@@ -39,6 +40,7 @@ class MultiGridEnv(gym.Env):
         width: int | None = None,
         height: int | None = None,
         max_steps: int = 100,
+        reward_type: RewardType = RewardType.GLOBAL,
         see_through_walls: bool = False,
         agents:List[Agent]=None,
         render_mode: str | None = 'human',
@@ -46,18 +48,17 @@ class MultiGridEnv(gym.Env):
         highlight: bool = True,
         tile_size: int = TILE_PIXELS,
         agent_view_size: int = 7,
-        num_missions=1,
         partial_obs=True,
         actions_set=Actions,
         window_name="Multi-Agent minigrid",
     ):
         # set the agents
         assert len(agents) > 0, "Must have at least one agent"
-        assert num_missions>0, "Must have at least one mission"
         self.agents = agents
-        self.num_missions = num_missions
-        missions = [mission_space.sample() for _ in range(self.num_missions)]
-        self.missions = {mission: [agent.id for agent in self.agents] for mission in missions}
+        for agent in self.agents:
+            agent.mission = mission_space.sample()
+
+        self.missions = {agent.id: agent.mission for agent in self.agents}
         self.agent_view_size = agent_view_size
 
         # set environment parameters
@@ -71,6 +72,7 @@ class MultiGridEnv(gym.Env):
         # Set the actions
         self.actions = actions_set
         self.action_space = spaces.Discrete(len(self.actions))
+        self.action_space = spaces.Tuple(tuple([self.action_space] * len(self.agents)))
 
         # Set the observation
         self.partial_obs = partial_obs
@@ -80,7 +82,7 @@ class MultiGridEnv(gym.Env):
             )
         else:
             image_observation_space = spaces.Box(
-                low=0, high=255, shape=(self.width, self.height, 4), dtype='uint8'
+                low=0, high=255, shape=(self.width, self.height, 9), dtype='uint8'
             )
         observation_space = spaces.Dict(
             {
@@ -88,10 +90,11 @@ class MultiGridEnv(gym.Env):
                 "mission": mission_space,
             }
         )
-        self.observation_space = spaces.Tuple(observation_space for _ in range(len(self.agents)))
+        self.observation_space = spaces.Tuple(tuple(observation_space for _ in range(len(self.agents))))
 
         # Set the reward range
         self.reward_range = (0, 1)
+        self.reward_type = reward_type
 
         self.screen_size = screen_size
         self.render_size = None
@@ -437,16 +440,15 @@ class MultiGridEnv(gym.Env):
     def step(
         self, actions: List[ActType]
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-        assert isinstance(actions, list), 'actions must be a list'
-        assert len(actions) == len(self.agents), 'must have an action for each agent'
-
+        assert len(actions) == len(self.agents)
+        
         self.step_count += 1
 
-        rewards = np.zeros(len(actions))
+        rewards = np.zeros(len(self.agents))
         terminated = False
         truncated = False
 
-        order = np.random.permutation(len(actions))
+        order = np.random.permutation(len(self.agents))
 
         for i in order:
             reward = 0
@@ -501,7 +503,11 @@ class MultiGridEnv(gym.Env):
             else:
                 assert False, "unknown action"
             
-            rewards[i] = reward
+            if self.reward_type==RewardType.GLOBAL:
+                rewards += reward
+            elif self.reward_type==RewardType.INDIVIDUAL:
+                rewards[i] = reward
+        
 
         if self.step_count >= self.max_steps:
             truncated = True
@@ -555,15 +561,13 @@ class MultiGridEnv(gym.Env):
 
         assert isinstance(self.missions, dict), "mission must be a dictionary indicating the mission for agents"
         
-        image = [grid.encode(vis_mask) for grid, vis_mask in zip(grids, vis_masks)]
-        obs = []
-        for i in range(len(self.agents)):	
-            obs.append({
+        image = tuple([grid.encode(vis_mask) for grid, vis_mask in zip(grids, vis_masks)])
+        obs = [(lambda i:{
                 'image': image[i],
-                'mission': [key for key, value in self.missions.items() if i in value],
-            })
+                'mission': self.missions[i],
+            })(i) for i in range(len(self.agents))]
         
-        return obs
+        return tuple(obs)
 
     def get_obs_render(self, obs, tile_size=TILE_PIXELS // 2):
         """

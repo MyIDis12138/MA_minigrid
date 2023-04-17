@@ -132,10 +132,10 @@ class SingleAgentWrapper(Wrapper):
         """
         super().__init__(env)
         self.observation_space = env.observation_space.spaces[0]
+        self.action_space = env.action_space.spaces[0]
 
     def observation(self, obs):
         obs = obs[0]
-        obs['mission'] = obs['mission'][0]
         return obs
     
     def reset(self):

@@ -92,18 +92,16 @@ class RGBImgObsWrapper(ObservationWrapper):
         new_image_space = spaces.Box(
             low=0,
             high=255,
-            shape=(self.env.width * tile_size, self.env.height * tile_size, 3),
+            shape=(3, self.env.width * tile_size, self.env.height * tile_size),
             dtype="uint8",
         )
 
-        self.observation_space = spaces.Dict(
-            {**self.observation_space.spaces, "image": new_image_space}
-        )
+        self.observation_space = new_image_space
 
     def observation(self, obs):
         rgb_img = self.get_full_render(highlight=True, tile_size=self.tile_size)
 
-        return {**obs, "image": rgb_img}
+        return rgb_img
 
 
 class SingleAgentWrapper(Wrapper):
@@ -135,8 +133,8 @@ class SingleAgentWrapper(Wrapper):
         obs = obs[0]
         return obs
     
-    def reset(self):
-        obs,_ = super().reset()
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+        obs,_ = super().reset(seed=seed, options=options)
         return self.observation(obs)
     
     def step(self, actions):

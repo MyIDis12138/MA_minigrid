@@ -7,7 +7,7 @@ import gymnasium as gym
 import itertools as itt
 
 class DangerGroundEnv(MARoomGridLevel):
-    def __init__(self, room_size=7, call=True):
+    def __init__(self, room_size=7, call=True, **kwargs):
         self.lava_colors = ['yellow', 'blue']
         self.danger_names = ['ground','zone','area']
         self.n_target = 2
@@ -22,6 +22,7 @@ class DangerGroundEnv(MARoomGridLevel):
             room_size=room_size,
             agent_view_size=7,
             max_steps=100,
+            **kwargs
         )
 
     def gen_mission(self):

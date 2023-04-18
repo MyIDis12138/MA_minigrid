@@ -550,7 +550,7 @@ class MultiGridEnv(gym.Env):
                     agent_pos=(agent_view_size // 2, agent_view_size -1), agent_id=agent.id
                 )
             else:
-                vis_mask = np.ones(shape=(grid.width, grid.height), dtype=np.bool)
+                vis_mask = np.ones(shape=(grid.width, grid.height), dtype=bool)
             
             grids.append(grid)
             vis_masks.append(vis_mask)

@@ -515,7 +515,7 @@ class GoToFavoriteInstr(MAActionInstr):
     def surface(self, env):
         if self._surface:
             return self._surface
-        return f"go to {self.name} favorite toy"
+        return f"go to {self.name} toy"
 
     def verify_action(self, action):
 

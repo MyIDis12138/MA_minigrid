@@ -20,7 +20,8 @@ class DangerRoomEnv(MARoomGridLevel):
             num_dists=3,
             doors_open=True,
             all_doors=True,
-            call = True
+            call = True,
+            **kwargs
     ):
         self.names = ['jack', 'mary', 'tom', 'mike']
         self.doors_open = doors_open
@@ -31,7 +32,8 @@ class DangerRoomEnv(MARoomGridLevel):
             agents_colors=['red'],
             room_size=room_size,
             num_rows=num_rows, 
-            num_cols=num_cols, 
+            num_cols=num_cols,
+            **kwargs
         )
 
     def gen_mission(self):

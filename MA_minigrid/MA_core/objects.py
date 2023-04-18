@@ -116,7 +116,7 @@ class Agent(MAWorldObj):
         id: int = None,
         color: str = "red",
         direction: int = 0, 
-        view_size: int = 7
+        view_size: int = 7,
     ):
 
         assert color in COLORS.keys(), "color must be one of %s" % COLORS.keys()

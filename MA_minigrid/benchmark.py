@@ -29,7 +29,7 @@ def benchmark(env_id, num_resets, num_frames):
 
     # Create an environment with an RGB agent observation
     env = gym.make(env_id, render_mode="rgb_array")
-    env = SingleAgentWrapper(env)
+    #env = SingleAgentWrapper(env)
 
     env.reset()
     # Benchmark rendering in agent view
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "--env-id",
         dest="env_id",
         help="gym environment to load",
-        default="SQbabyai-DangerRoom-v0",
+        default="MiniGrid-LavaGapS7-v0",
     )
     parser.add_argument(
         "--seed",

@@ -1,0 +1,49 @@
+# Package ######################################################################
+
+[build-system]
+requires = ["setuptools >= 61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MAminigrid"
+version = 0.1.0
+description = "Multi agent Minimalistic gridworld reinforcement learning environments."
+readme = "README.md"
+requires-python = ">= 3.7, < 3.11"
+authors = [{ name = "Yang Gu", email = "yanggu123138@gmail.com" }]
+license = { text = "MIT License" }
+keywords = ["Memory, Environment, Multi Agent, RL, Gymnasium, minigrid"]
+classifiers = [
+    "Development Status :: 1 - Beta",  
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+]
+dependencies = [
+    "numpy>=1.18.0",
+    "gymnasium>=0.26",
+    "pygame>=2.2.0",
+    "minigrid>=2.2.0",
+]
+dynamic = ["version"]
+requires-python = ">=3.7"
+
+[project.urls]
+Homepage = "https://github.com/MyIDis12138"
+Repository = "https://github.com/MyIDis12138/MA_minigrid"
+"Bug Report" = "https://github.com/MyIDis12138/MA_minigrid/issues"
+
+[project.entry-points."gymnasium.envs"]
+__root__ = "MA_minigrid.__init__:register_SQbabyai_envs"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["MA_minigrid*"]
+exclude = ["**/__pycache__"]

@@ -15,7 +15,7 @@ class DangerAgentEnv(MARoomGridLevel):
             self, 
             radius=1,
             call = True,
-            room_size=8,
+            room_size=7,
             view_size=7,
             **kwargs
     ):
@@ -32,10 +32,10 @@ class DangerAgentEnv(MARoomGridLevel):
         )
         self.agent_start_pos = (1, 1)
         self.robot_poss = [
+            (self.agent_start_pos[0], self.agent_start_pos[1]+2),
+            (self.room_size-self.agent_start_pos[0]-1, self.agent_start_pos[1]+2),
             (self.agent_start_pos[0]+2, self.agent_start_pos[1]),
             (self.agent_start_pos[0]+2, self.room_size-self.agent_start_pos[1]-1),
-            (self.agent_start_pos[0]+5, self.room_size-self.agent_start_pos[1]-1),
-            (self.agent_start_pos[0]+5, self.agent_start_pos[1]),
         ]
         self.call = call
         self.radius = radius
@@ -64,11 +64,10 @@ class DangerAgentEnv(MARoomGridLevel):
         self.put_obj(self.agents[0],*self.agent_start_pos)
         self.agents[0].dir = 0
 
-        rand_pos = self._rand_int(0,2)
-
         for id in range(2):
+            rand_pos = self._rand_int(0,2)
             self.put_obj(self.agents[id+1],*self.robot_poss[rand_pos+id*2])
-            self.agents[id+1].dir = id*2+1
+            self.agents[id+1].dir = id
 
         self.robot_truns = [False, False]
 
@@ -99,8 +98,9 @@ class DangerAgentEnv(MARoomGridLevel):
         actions = []
         actions += action
         # enable lazy action for danger agents
-        if self.step_count%2:
-            for i in range(2):
+
+        for i in range(2):
+            if (self.step_count+1)%2:
                 fwd_cell = self.grid.get(*self.agents[i+1].front_pos)
                 if self.robot_truns[i]:
                     actions.append(Actions.left)
@@ -111,8 +111,8 @@ class DangerAgentEnv(MARoomGridLevel):
                     self.robot_truns[i] = True
                 else:
                     actions.append(Actions.forward) 
-        else:
-            actions += [Actions.done, Actions.done]
+            else:
+                actions.append(Actions.done)
         
         obs, reward, terminated, truncated, info = super().step(actions)
         if self.agents[0].terminated:

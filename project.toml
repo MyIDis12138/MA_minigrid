@@ -14,7 +14,6 @@ authors = [{ name = "Yang Gu", email = "yanggu123138@gmail.com" }]
 license = { text = "MIT License" }
 keywords = ["Memory, Environment, Multi Agent, RL, Gymnasium, minigrid"]
 classifiers = [
-    "Development Status :: 1 - Beta",  
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",

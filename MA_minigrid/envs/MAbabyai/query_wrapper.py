@@ -113,6 +113,7 @@ class MultiGrid_Safety_Query(Wrapper):
         if action[0] in self.mini_grid_actions_map:
             if self.verbose:
                 print('MiniGrid action:', action[0])
+                self.unwrapped.verbose_text= 'MiniGrid action:' + action[0]
             obs, reward, done, info  = super().step(self.mini_grid_actions_map[action[0]])
             obs['ans'] = self.prev_ans
             return obs, reward, done, info
@@ -130,6 +131,15 @@ class MultiGrid_Safety_Query(Wrapper):
         if self.verbose:
             print('Q:', action)
             print('Ans:', ans)
+            Q = ""
+            for s in action:
+                Q = Q+" "+s
+        
+            A = ""
+            for s in ans:
+                A = A+" "+s
+                
+            self.unwrapped.verbose_text= 'Q: ' + Q + '\n Ans: ' + A
 
         self.prev_query = ' '.join(action)
         self.prev_ans = ans

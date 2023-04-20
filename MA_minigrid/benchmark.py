@@ -29,7 +29,7 @@ def benchmark(env_id, num_resets, num_frames):
 
     # Create an environment with an RGB agent observation
     env = gym.make(env_id, render_mode="rgb_array")
-    #env = SingleAgentWrapper(env)
+    env = SingleAgentWrapper(env)
 
     env.reset()
     # Benchmark rendering in agent view

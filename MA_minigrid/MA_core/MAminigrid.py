@@ -125,6 +125,7 @@ class MultiGridEnv(gym.Env):
 
         self.window_name = window_name
         self.mission_text = ""
+        self.verbose_text = ""
 
     def reset(self, *, seed=None, options=None)-> tuple[ObsType, dict[str, Any]]:
         # Generate a new random grid at the start of each episode
@@ -602,7 +603,7 @@ class MultiGridEnv(gym.Env):
                 self.window = pygame.display.set_mode(
                     (self.screen_size, self.screen_size)
                 )
-                pygame.display.set_caption(self.window_name)
+                pygame.display.set_caption("MA_minigrid")
             if self.clock is None:
                 self.clock = pygame.time.Clock()
             surf = pygame.surfarray.make_surface(img)
@@ -620,8 +621,16 @@ class MultiGridEnv(gym.Env):
             bg = pygame.transform.smoothscale(bg, (self.screen_size, self.screen_size))
 
             font_size = 22
-            text = self.mission_text
+            text = self.verbose_text
             font = pygame.freetype.SysFont(pygame.font.get_default_font(), font_size)
+            
+            # Render the additional line of text at the top
+            top_text = self.mission_text
+            top_text_rect = font.get_rect(top_text, size=font_size)
+            top_text_rect.center = bg.get_rect().center
+            top_text_rect.y = font_size * 0.5
+            font.render_to(bg, top_text_rect, top_text, size=font_size)
+            
             text_rect = font.get_rect(text, size=font_size)
             text_rect.center = bg.get_rect().center
             text_rect.y = bg.get_height() - font_size * 1.5

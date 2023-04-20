@@ -271,6 +271,7 @@ class MAGrid:
                 assert vis_mask is not None
                 if vis_mask[i, j]:
                     v = self.get(i, j)
+                    w = self.get_agent(i, j)
 
                     if v is None:
                         array[i, j, 0] = OBJECT_TO_IDX['empty']
@@ -278,8 +279,6 @@ class MAGrid:
                         array[i, j, 2] = 0
                     else:
                         array[i, j][0:3] = v.encode()
-
-                    w = self.get_agent(i, j)
 
                     if w is None:
                         array[i, j, 3]= OBJECT_TO_IDX['empty']

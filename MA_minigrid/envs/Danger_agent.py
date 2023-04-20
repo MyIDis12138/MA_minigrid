@@ -69,7 +69,7 @@ class DangerAgentEnv(MARoomGridLevel):
             self.put_obj(self.agents[id+1],*self.robot_poss[rand_pos+id*2])
             self.agents[id+1].dir = id
 
-        self.robot_truns = [False, False]
+        self.robot_turns = [False, False]
 
     def _gen_instr(self, agent_id=0):
         danger_agent_id = self._rand_int(1, 3)
@@ -102,13 +102,13 @@ class DangerAgentEnv(MARoomGridLevel):
         for i in range(2):
             if (self.step_count+1)%2:
                 fwd_cell = self.grid.get(*self.agents[i+1].front_pos)
-                if self.robot_truns[i]:
+                if self.robot_turns[i]:
                     actions.append(Actions.left)
-                    self.robot_truns[i] = False
+                    self.robot_turns[i] = False
                     continue
                 if isinstance(fwd_cell, MAWall):
                     actions.append(Actions.left)
-                    self.robot_truns[i] = True
+                    self.robot_turns[i] = True
                 else:
                     actions.append(Actions.forward) 
             else:
@@ -119,3 +119,6 @@ class DangerAgentEnv(MARoomGridLevel):
             terminated = True
 
         return obs, reward, terminated, truncated, info
+    
+    
+

@@ -18,13 +18,13 @@ key_to_action = {
 
 
 questions_ground = [
-            ["what", "is", "danger", "ground"], 
-            ["what", "is", "danger", "zone"],
-            ["what", "is", "danger", "area"],
             ["where", "is", "danger", "ground"], 
             ["where", "is", "danger", "zone"],
             ["where", "is", "danger", "area"],
             ["where", "is", "danger", "robot"],
+            ["what", "is", "danger", "ground"], 
+            ["what", "is", "danger", "zone"],
+            ["what", "is", "danger", "area"],
 ]
 
 questions_room = [
@@ -66,3 +66,4 @@ if __name__ == "__main__":
     env = MultiGrid_Safety_Query(env, verbose=True)
     manual_control = ManualControl(env, key_to_action=key_to_action, question_set=map[env_name])
     manual_control.start()
+

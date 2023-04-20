@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+import time
+
 import gymnasium as gym
 import pygame
 from gymnasium import Env
@@ -76,6 +78,8 @@ class ManualControl:
         if self.question_set:
             for question in self.question_set:
                 obs, reward, done, info = self.env.step(question)
+                time.sleep(1)
+                self.env.render()
 
     def key_handler(self, event):
         key: str = event.key

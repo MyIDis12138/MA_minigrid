@@ -390,6 +390,40 @@ class GoalConstrainedInstr(MASeqInstr):
     
     def surface(self, env):
         return f"{self.instr_a.surface(env)}, {self.instr_b.surface(env)}"
+    
+class MultiConstrainedInstr(MAInstr):
+    def __init__(self, agent_id: int, cons_instrs: tuple, goal_instr: MAInstr):
+        assert isinstance(cons_instrs, tuple)
+        assert isinstance(cons_instrs[0], MAActionInstr)
+        assert isinstance(goal_instr, MASeqInstr)
+        super().__init__(agent_id=agent_id)
+        self.cons_instrs = cons_instrs
+        self.goal_instr = goal_instr
+
+    def reset_verifier(self, env):
+        super().reset_verifier(env)
+        for instr in self.cons_instrs:
+            instr.reset_verifier(env)
+        self.goal_instr.reset_verifier(env)
+        self.goal_instr_done = False
+    
+    def verify(self, action):
+        for instr in self.cons_instrs:
+            if instr.verify(action) == "failure":
+                self.cons_instrs = False
+                return "failure"
+        
+        if self.goal_instr_done != "success":
+            self.goal_instr_done = self.goal_instr.verify(action)
+            return "success"            
+        
+        if self.goal_instr_done == "failure":
+            return "failure"
+
+        return "continue"
+
+    def surface(self, env):
+        return f"{self.cons_instrs.surface(env)}, {self.instr_b.surface(env)}"
 
 class DangerGroundInstr(MAActionInstr):
     """

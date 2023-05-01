@@ -7,7 +7,13 @@ from MA_minigrid import wrappers
 def register_SQbabyai_envs():
     register(
         id="SQbabyai-DangerGround-v0",
-        entry_point="MA_minigrid.envs.Danger_gound:DangerGroundEnv",
+        entry_point="MA_minigrid.envs.Danger_ground:DangerGroundEnv",
+    )
+
+    register(
+        id="SQbabyai-DangerGround_large-v0",
+        entry_point="MA_minigrid.envs.Danger_ground:DangerGroundEnv",
+        kwargs={'room_size': 12}
     )
     
     register(

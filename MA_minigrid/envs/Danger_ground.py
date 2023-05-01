@@ -7,12 +7,12 @@ import gymnasium as gym
 import itertools as itt
 
 class DangerGroundEnv(MARoomGridLevel):
-    def __init__(self, room_size=7, call=True, **kwargs):
+    def __init__(self, room_size=7, call=True, goal_pos=None, **kwargs):
         self.lava_colors = ['yellow', 'blue']
-        self.danger_names = ['ground','zone','area']
+        self.danger_names = ['ground','zone','floor']
         self.n_target = 2
         self.call = call
-        self.goal_pos = (room_size - 2, room_size - 2)
+        self.goal_pos = goal_pos if goal_pos else (room_size - 2, room_size - 2)
         self.agent_start_pos = (2, 1)
         self.oracle_pos = (3, 1)
         super().__init__(

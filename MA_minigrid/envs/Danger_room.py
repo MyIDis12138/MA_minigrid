@@ -78,36 +78,45 @@ class DangerRoomEnv(MARoomGridLevel):
             self.oracle = oracle
 
     def _gen_instr(self, agent_id = 0):
-        self.rand_names = self._rand_subset(self.names, 2)
+        fav_nameid, danger_nameid = self._rand_subset([0,1,2,3], 2)
         fav_room_id = self.room_from_pos(*self.obj.cur_pos).room_id
         danger_except = [self.agent_init_room, fav_room_id]
         danger_room_set = [i for i in range(self.num_rows * self.num_cols) if i not in danger_except]
         danger_room_id, other_room = self._rand_subset(danger_room_set,2)
 
-        goal_instr = self.instrs_controller._make_instr("favoriate", agent_id=agent_id, obj_desc=MAObjDesc(self.obj.type, self.obj.color), name=f"{self.rand_names[0]}")
-        danger_instr = self.instrs_controller._make_instr("danger_room", agent_id=agent_id, room_name=self.rand_names[1], room_id=danger_room_id)
+        goal_instr = self.instrs_controller._make_instr("favoriate", agent_id=agent_id, obj_desc=MAObjDesc(self.obj.type, self.obj.color), name=f"{self.names[fav_nameid]}")
+        danger_instr = self.instrs_controller._make_instr("danger_room", agent_id=agent_id, room_name=self.names[danger_nameid], room_id=danger_room_id)
         env_instr = self.instrs_controller._make_instr("constriant", agent_id=agent_id, cons_instr=danger_instr, goal_instr=goal_instr)
         self.instrs_controller.add_instr(instr=env_instr, agent_id=agent_id)
 
         self.knowledge_facts = [
-                    '{} toy is {} {}'.format(self.rand_names[0], self.obj.color, self.obj.type),
+                    '{} toy is {} {}'.format(self.names[fav_nameid], self.obj.color, self.obj.type),
                     '{} {} in room{}'.format(self.obj.color, self.obj.type, fav_room_id ),
-                    '{} room is room{}'.format(self.rand_names[1], danger_room_id), 
-                    '{} toy is {} {}'.format(self.rand_names[0], self.objs[1].color, self.objs[1].type),
-                    '{} room is room{}'.format(self.rand_names[0], other_room), 
+                    '{}\'s room is room{}'.format(self.names[danger_nameid], danger_room_id), 
+                    '{} toy is {} {}'.format(self.names[danger_nameid], self.objs[1].color, self.objs[1].type),
+                    '{}\'s room is room{}'.format(self.names[fav_nameid], other_room), 
                 ]
         
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
+        self.encode = (fav_nameid, 
+                       danger_nameid,
+                       self.obj.color, 
+                       self.obj.type, 
+                       self.objs[1].color, 
+                       self.objs[1].type, 
+                       danger_room_id, 
+                       other_room
+                    )
 
     # map the question to the answer
     def get_answer(self, question, default_answer='I　dont　know'):
-        if question[0] == 'what' and question[1] == 'is' and question[2] == f'{self.rand_names[0]}' and question[3] == 'toy':
+        if question[0] == 'what' and question[1] == 'is' and question[2] == f'{self.names[self.encode[0]]}' and question[3] == 'toy':
             return self.knowledge_facts[0]
         elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.obj.color}' and question[3] == f'{self.obj.type}':
             return self.knowledge_facts[1]
-        elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.rand_names[1]}' and question[3] == 'room':
+        elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.names[self.encode[1]]}' and question[3] == 'room':
             return self.knowledge_facts[2]
         else:
             return default_answer

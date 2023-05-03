@@ -5,6 +5,9 @@ from MA_minigrid.wrappers import SingleAgentWrapper
 from MA_minigrid.envs.MAbabyai.query_wrapper import MultiGrid_Safety_Query
 from MA_minigrid.wrappers import KGWrapper
 
+from MA_minigrid.envs.MAbabyai.utils.format import Vocabulary
+from MA_minigrid.envs.MAbabyai.query_GPT import OracleGPT
+
 key_to_action = {
     "a": [["left"]],
     "d": [["right"]],
@@ -21,11 +24,11 @@ key_to_action = {
 questions_ground = [
             ["where", "is", "danger", "ground"], 
             ["where", "is", "danger", "zone"],
-            ["where", "is", "danger", "area"],
+            ["where", "is", "danger", "floor"],
             ["where", "is", "danger", "robot"],
             ["what", "is", "danger", "ground"], 
             ["what", "is", "danger", "zone"],
-            ["what", "is", "danger", "area"],
+            ["what", "is", "danger", "floor"],
 ]
 
 questions_room = [
@@ -65,9 +68,11 @@ if __name__ == "__main__":
     #env_name = 'SQbabyai-DangerAgent-v0'
     #env_name = 'SQbabyai-DangerAgent-v0'
     env = gym.make(env_name)
+    Oracle = OracleGPT(Vocabulary(file_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt'))
     env = SingleAgentWrapper(env)
-    env = MultiGrid_Safety_Query(env, verbose=True, mode='GPT', vocab_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt')
+    env = MultiGrid_Safety_Query(env, oracle=Oracle,verbose=True, mode='GPT', vocab_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt')
     env = KGWrapper(env, kg_repr='raw', mode='graph_overlap')
     manual_control = ManualControl(env, key_to_action=key_to_action, question_set=map[env_name])
     manual_control.start()
 
+ 

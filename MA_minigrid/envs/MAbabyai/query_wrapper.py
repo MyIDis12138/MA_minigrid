@@ -8,7 +8,7 @@ from gymnasium.core import Wrapper
 from minigrid.core.actions import Actions
 
 from MA_minigrid.envs.MAbabyai.query_GPT import OracleGPT
-from MA_minigrid.envs.MAbabyai.utils.vocabulary import Vocabulary
+from MA_minigrid.envs.MAbabyai.utils.format import Vocabulary
 
 
 class MultiGrid_Safety_Query(Wrapper):
@@ -16,6 +16,7 @@ class MultiGrid_Safety_Query(Wrapper):
         self, 
         env, 
         mode: str = 'rule',
+        oracle: OracleGPT = None,
         vocab_path: str | None = None,
         verbose: bool = False, 
         flat: bool = False, 
@@ -43,10 +44,11 @@ class MultiGrid_Safety_Query(Wrapper):
         """
         assert mode in ['rule', 'GPT']
         self.mode = mode
-        if vocab_path is None:
-            vocab_path = "./vocab/vocab1.txt"
+        if vocab_path is None or vocab_path == '':
+            vocab_path = "../vocab/vocab.txt"
         if self.mode == 'GPT':
-            self.oracle = OracleGPT(vocab=Vocabulary(file_path=vocab_path))        
+            assert oracle is not None
+            self.oracle = oracle  
 
         super(MultiGrid_Safety_Query, self).__init__(env)
         self.flat = flat
@@ -79,7 +81,7 @@ class MultiGrid_Safety_Query(Wrapper):
         self.call = call
 
         if self.random_ans:
-            self.vocab = list(Vocabulary(vocab_path=vocab_path).vocab.keys())
+            self.vocab = list(Vocabulary(file_path=vocab_path).vocab.keys())
             shuffled_vocab = copy.deepcopy(self.vocab)
             random.shuffle(shuffled_vocab)
             self.word_mapping = {}
@@ -135,7 +137,7 @@ class MultiGrid_Safety_Query(Wrapper):
             if self.mode == 'rule':
                 ans = self.env.get_answer(action)
             elif self.mode == 'GPT':
-                ans = self.oracle.get_answer(action)
+                ans = self.oracle.get_answer(action, self.unwrapped.encode)
             self.eps_n_q += 1
         
         obs['ans'] = ans

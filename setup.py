@@ -22,5 +22,6 @@ setup(
         "gymnasium>=0.26",
         "pygame>=2.2.0",
         "minigrid>=2.2.0",
+        'openai',
     ],
 )

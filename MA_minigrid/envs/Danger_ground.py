@@ -9,7 +9,7 @@ import itertools as itt
 class DangerGroundEnv(MARoomGridLevel):
     def __init__(self, room_size=7, call=True, **kwargs):
         self.lava_colors = ['yellow', 'blue']
-        self.danger_names = ['ground','zone','area']
+        self.danger_names = ['ground','zone','floor']
         self.n_target = 2
         self.call = call
         self.goal_pos = (room_size - 2, room_size - 2)
@@ -42,6 +42,7 @@ class DangerGroundEnv(MARoomGridLevel):
         self.agents[0].dir = 1
         
         self._gen_instr()
+        
 
     def _gen_instr(self, agent_id = 0):
         danger_instr = self.instrs_controller._make_instr("danger_ground", agent_id=agent_id, lava_color=self.lava_colors[self.danger_color_idx], lava_name=self.danger_names[self.danger_name_idx])
@@ -54,6 +55,7 @@ class DangerGroundEnv(MARoomGridLevel):
 
         self.knowledge_facts = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
+        self.encode = (self.danger_color_idx, self.danger_name_idx)
 
     def _gen_lava(self):
         danger_name_idx= self._rand_int(0, len(self.danger_names))

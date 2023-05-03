@@ -87,6 +87,7 @@ class DangerAgentEnv(MARoomGridLevel):
             1: "robot with no mission",
             2: "robot with no mission"
         }
+        self.encode = (self.agents[danger_agent_id].color)
 
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == 'robot':

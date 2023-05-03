@@ -29,6 +29,7 @@ enemy noun
 square noun
 door noun
 goal noun
+answer noun
 none adj
 blue adj
 green adj
@@ -74,3 +75,5 @@ limit prep
 different prep
 from prep
 and prep
+is prep
+the prep

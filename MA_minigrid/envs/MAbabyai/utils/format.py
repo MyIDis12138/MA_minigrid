@@ -1,31 +1,10 @@
-"""
-Copied and adapted from https://github.com/IouJenLiu/AFK
-"""
-
-from __future__ import annotations
-
 import os
 import json
-from .. import utils
-
 
 class Vocabulary:
-    def __init__(self, max_size=30, file_path:str=''):
-        """
-        Vocabulary class for the dataset
-        Vocabulary is a dictionary of words and their corresponding indices
-        Example of a vocabulary file:
-            word1 nonn
-            ...
-            wordn noun
-            wordn+1 adj
-            ...
-            wordm adj
-            others type
-            ...
-        """
+    def __init__(self, file_path='../vocab/vocab1.txt'):
+        self.file_path = file_path
         self.vocab = {}
-
         with open(file_path, 'r') as f:
             lines = f.readlines()
             for word in lines:
@@ -35,7 +14,7 @@ class Vocabulary:
                     self.noun_idx = len(self.vocab)
                 if part_of_speech == 'adj':
                     self.adj_idx = len(self.vocab)
-            
+
         self.max_size = len(self.vocab) + 2
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
 
@@ -51,12 +30,6 @@ class Vocabulary:
             self.inverse_vocab[old_vocab_len + 1] = token
 
         return self.vocab[token]
-
-    def save(self, path=None):
-        if path is None:
-            path = self.path
-        utils.create_folders_if_necessary(path)
-        json.dump(self.vocab, open(path, "w"))
 
     def copy_vocab_from(self, other):
         '''

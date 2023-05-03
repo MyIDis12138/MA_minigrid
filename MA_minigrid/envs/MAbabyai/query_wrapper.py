@@ -6,12 +6,16 @@ import random
 import gymnasium
 from gymnasium.core import Wrapper
 from minigrid.core.actions import Actions
+
+from MA_minigrid.envs.MAbabyai.query_GPT import OracleGPT
 from MA_minigrid.envs.MAbabyai.utils.vocabulary import Vocabulary
+
 
 class MultiGrid_Safety_Query(Wrapper):
     def __init__(
         self, 
         env, 
+        mode: str = 'rule',
         vocab_path: str | None = None,
         verbose: bool = False, 
         flat: bool = False, 
@@ -37,9 +41,12 @@ class MultiGrid_Safety_Query(Wrapper):
             random_ans: whether to randomize the answer
             reliability: probability of answering correctly when random_ans is set to True
         """
-
-        if vocab_path is not None:
+        assert mode in ['rule', 'GPT']
+        self.mode = mode
+        if vocab_path is None:
             vocab_path = "./vocab/vocab1.txt"
+        if self.mode == 'GPT':
+            self.oracle = OracleGPT(vocab=Vocabulary(file_path=vocab_path))        
 
         super(MultiGrid_Safety_Query, self).__init__(env)
         self.flat = flat
@@ -86,6 +93,8 @@ class MultiGrid_Safety_Query(Wrapper):
         self.eps_steps = 0
         self.eps_n_q = 0
         self.action = 'None'
+        if self.mode == 'GPT':
+            self.oracle.reset(self.unwrapped)
         
         if self.random_ans:
             shuffled_vocab = copy.deepcopy(self.vocab)
@@ -123,7 +132,10 @@ class MultiGrid_Safety_Query(Wrapper):
         if self.query_limit > 0 and self.eps_n_q >= self.query_limit:
             ans = 'None'
         else:
-            ans = self.env.get_answer(action)
+            if self.mode == 'rule':
+                ans = self.env.get_answer(action)
+            elif self.mode == 'GPT':
+                ans = self.oracle.get_answer(action)
             self.eps_n_q += 1
         
         obs['ans'] = ans

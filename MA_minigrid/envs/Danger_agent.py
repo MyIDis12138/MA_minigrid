@@ -13,10 +13,10 @@ class DangerAgentEnv(MARoomGridLevel):
     """
     def __init__(
             self, 
-            radius=1,
-            call = True,
-            room_size=7,
-            view_size=7,
+            radius: int =1,
+            call: bool = True,
+            room_size: int = 7,
+            view_size: int = 7,
             **kwargs
     ):
         self.robot_colors = self._rand_subset(['yellow', 'green', 'blue'], 2)
@@ -81,7 +81,7 @@ class DangerAgentEnv(MARoomGridLevel):
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
 
-        self.useful_answers = ['danger robot is {}'.format(self.agents[danger_agent_id].color)]
+        self.knowledge_facts = ['danger robot is {}'.format(self.agents[danger_agent_id].color)]
         self.missions = {
             0: self.instrs_controller.surface(self, agent_id),
             1: "robot with no mission",
@@ -90,7 +90,7 @@ class DangerAgentEnv(MARoomGridLevel):
 
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == 'robot':
-            return self.useful_answers[0]
+            return self.knowledge_facts[0]
         else:
             return default_answer
 

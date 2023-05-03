@@ -78,6 +78,7 @@ class ManualControl:
         if self.question_set:
             for question in self.question_set:
                 obs, reward, done, info = self.env.step(question)
+                print(f"step={self.env.step_count}, reward={reward:.2f}, info={info}")
                 time.sleep(1)
                 self.env.render()
 

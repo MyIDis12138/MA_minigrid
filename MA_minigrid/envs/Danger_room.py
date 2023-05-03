@@ -14,13 +14,13 @@ class DangerRoomEnv(MARoomGridLevel):
 
     def __init__(
             self,             
-            room_size=5,
-            num_rows=3,
-            num_cols=3,
-            num_dists=3,
-            doors_open=True,
-            all_doors=True,
-            call = True,
+            room_size: int = 5,
+            num_rows: int = 3,
+            num_cols: int = 3,
+            num_dists: int = 3,
+            doors_open: bool = True,
+            all_doors: bool = True,
+            call: bool = True,
             **kwargs
     ):
         self.names = ['jack', 'mary', 'tom', 'mike']
@@ -64,6 +64,7 @@ class DangerRoomEnv(MARoomGridLevel):
 
         while True:
             objs = self.add_distractors(num_distractors=self.num_dists, all_unique=True, type_set=['ball', 'box'])
+            self.objs = objs
             self.obj = objs[0]
             #self.others_fav = self._rand_elem(objs[1:])
             if self.check_objs_reachable(self.agents): 
@@ -81,17 +82,20 @@ class DangerRoomEnv(MARoomGridLevel):
         fav_room_id = self.room_from_pos(*self.obj.cur_pos).room_id
         danger_except = [self.agent_init_room, fav_room_id]
         danger_room_set = [i for i in range(self.num_rows * self.num_cols) if i not in danger_except]
-        danger_room_id = self._rand_elem(danger_room_set)
+        danger_room_id, other_room = self._rand_subset(danger_room_set,2)
 
         goal_instr = self.instrs_controller._make_instr("favoriate", agent_id=agent_id, obj_desc=MAObjDesc(self.obj.type, self.obj.color), name=f"{self.rand_names[0]}")
         danger_instr = self.instrs_controller._make_instr("danger_room", agent_id=agent_id, room_name=self.rand_names[1], room_id=danger_room_id)
         env_instr = self.instrs_controller._make_instr("constriant", agent_id=agent_id, cons_instr=danger_instr, goal_instr=goal_instr)
         self.instrs_controller.add_instr(instr=env_instr, agent_id=agent_id)
 
-        self.useful_answers = [
+        self.knowledge_facts = [
                     '{} toy is {} {}'.format(self.rand_names[0], self.obj.color, self.obj.type),
                     '{} {} in room{}'.format(self.obj.color, self.obj.type, fav_room_id ),
-                    '{} room is room{}'.format(self.rand_names[1], danger_room_id), ]
+                    '{} room is room{}'.format(self.rand_names[1], danger_room_id), 
+                    '{} toy is {} {}'.format(self.rand_names[0], self.objs[1].color, self.objs[1].type),
+                    '{} room is room{}'.format(self.rand_names[0], other_room), 
+                ]
         
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
@@ -100,10 +104,10 @@ class DangerRoomEnv(MARoomGridLevel):
     # map the question to the answer
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == f'{self.rand_names[0]}' and question[3] == 'toy':
-            return self.useful_answers[0]
+            return self.knowledge_facts[0]
         elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.obj.color}' and question[3] == f'{self.obj.type}':
-            return self.useful_answers[1]
+            return self.knowledge_facts[1]
         elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.rand_names[1]}' and question[3] == 'room':
-            return self.useful_answers[2]
+            return self.knowledge_facts[2]
         else:
             return default_answer

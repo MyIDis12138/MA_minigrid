@@ -3,6 +3,7 @@ import gymnasium as gym
 from MA_minigrid.ManualControl import ManualControl
 from MA_minigrid.wrappers import SingleAgentWrapper
 from MA_minigrid.envs.MAbabyai.query_wrapper import MultiGrid_Safety_Query
+from MA_minigrid.wrappers import KGWrapper
 
 key_to_action = {
     "a": [["left"]],
@@ -58,12 +59,13 @@ map = {
 
 
 if __name__ == "__main__":
-    #env_name = 'SQbabyai-DangerGround-v0'
+    env_name = 'SQbabyai-DangerGround-v0'
     #env_name = 'SQbabyai-DangerRoom-v0'
-    env_name = 'SQbabyai-DangerAgent-v0'
+    #env_name = 'SQbabyai-DangerAgent-v0'
     env = gym.make(env_name)
     env = SingleAgentWrapper(env)
-    env = MultiGrid_Safety_Query(env, verbose=True)
+    env = MultiGrid_Safety_Query(env, verbose=True, mode='GPT', vocab_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt')
+    env = KGWrapper(env, kg_repr='raw', mode='graph_overlap')
     manual_control = ManualControl(env, key_to_action=key_to_action, question_set=map[env_name])
     manual_control.start()
 

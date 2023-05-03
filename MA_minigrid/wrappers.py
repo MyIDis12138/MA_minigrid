@@ -155,7 +155,7 @@ class KGWrapper(Wrapper):
     one_hot: each sentence is encoded as an onehot channel of the image
     raw: return all raw sentences as a list in observation['kg_cc']
     """
-    def __init__(self, env, penalize_query=False, cc_bonus=0.05, weighted_bonus=False, kg_repr='one_hot', mode='graph', n_gram=2,
+    def __init__(self, env, penalize_query=False, cc_bonus=0.05, weighted_bonus=False, kg_repr='raw', mode='graph_overlap', n_gram=2,
                  distractor_file_path=None, n_distractors=0, node_sample_mode='fixed', args=None):
         super(KGWrapper, self).__init__(env)
         self.kg_repr = kg_repr
@@ -184,9 +184,9 @@ class KGWrapper(Wrapper):
             self.distractors = True
         else:
             self.distractors = False
-        self.total_frames_per_proc = args.frames // args.procs
+        self.total_frames_per_proc = args.frames // args.procs if args else 1000
         self.cur_total_frames = 0
-        self.decrease_bonus = args.decrease_bonus
+        self.decrease_bonus = args.decrease_bonus if args else False
 
     def bonus_coef(self):
         if not self.decrease_bonus:

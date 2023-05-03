@@ -53,6 +53,7 @@ questions_agent =[
 
 map = {
     'SQbabyai-DangerGround-v0': questions_ground,
+    'SQbabyai-DangerGround_large-v0': questions_ground, # 'SQbabyai-DangerGround-v0
     'SQbabyai-DangerRoom-v0': questions_room,
     'SQbabyai-DangerAgent-v0': questions_agent,
 }
@@ -61,6 +62,7 @@ map = {
 if __name__ == "__main__":
     env_name = 'SQbabyai-DangerGround-v0'
     #env_name = 'SQbabyai-DangerRoom-v0'
+    #env_name = 'SQbabyai-DangerAgent-v0'
     #env_name = 'SQbabyai-DangerAgent-v0'
     env = gym.make(env_name)
     env = SingleAgentWrapper(env)

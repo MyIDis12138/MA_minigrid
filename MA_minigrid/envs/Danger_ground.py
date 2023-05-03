@@ -7,7 +7,7 @@ import gymnasium as gym
 import itertools as itt
 
 class DangerGroundEnv(MARoomGridLevel):
-    def __init__(self, room_size:int = 7, call: bool = True, **kwargs):
+    def __init__(self, room_size=7, call=True, **kwargs):
         self.lava_colors = ['yellow', 'blue']
         self.danger_names = ['ground','zone','area']
         self.n_target = 2
@@ -52,7 +52,7 @@ class DangerGroundEnv(MARoomGridLevel):
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
 
-        self.knowledge_facts = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
+        self.useful_answers = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
 
     def _gen_lava(self):
@@ -121,7 +121,7 @@ class DangerGroundEnv(MARoomGridLevel):
 
     def get_answer(self, question, default_answer='I　dont　know'):
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == self.danger_names[self.danger_name_idx]:
-            return self.knowledge_facts[0]
+            return self.useful_answers[0]
         else:
             return default_answer
         

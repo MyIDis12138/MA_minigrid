@@ -8,7 +8,7 @@ import pygame
 from gymnasium import Env
 
 from minigrid.core.actions import Actions
-from MA_minigrid.envs.Danger_gound import DangerGroundEnv
+from MA_minigrid.envs.Danger_ground import DangerGroundEnv
 from MA_minigrid.wrappers import ImgObsWrapper, RGBImgObsWrapper
 
 

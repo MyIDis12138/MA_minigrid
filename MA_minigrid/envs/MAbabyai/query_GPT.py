@@ -34,7 +34,7 @@ class OracleGPT:
         If the agents ask you a question that you don't know the answer to, reply with "I dont know".\
         The agents mission: ```{self.agent_mission}```.\
         The knowledge of the environment you have is as follows: ```{self.knowledge_facts}```. \
-        The words available for your response: {self.vocab.vocab}, your response can not contain any other words not in them.\
+        The words available for your response: ```{self.vocab.vocab}```, your can not use any other words out of them.\
         Agent question: ```{query}```\
         """
         return prompt

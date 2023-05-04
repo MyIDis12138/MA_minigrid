@@ -17,7 +17,7 @@ key_to_action = {
     "pagedown": [["drop"]],
     "tab": [["pickup"]],
     "left shift": [["drop"]],
-    "enter": [["done"]],
+    "return": [["done"]],
 }
 
 

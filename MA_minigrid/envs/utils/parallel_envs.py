@@ -10,7 +10,7 @@ from MA_minigrid.wrappers import KGWrapper
 from MA_minigrid.envs.MAbabyai.utils.format import Vocabulary 
 from MA_minigrid.envs.MAbabyai.query_GPT import OracleGPT
 
-def make_envs(args, oracle: OracleGPT = None,num_envs: bool = None, verbose: bool = False, render: bool = False, vocab_path: str='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab'):
+def make_envs(args, oracle: OracleGPT = None, num_envs: bool = None, verbose: bool = False, render: bool = False, vocab_path: str='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab'):
     mapping = {
         'SQbabyai-DangerGround-v0': MultiGrid_Safety_Query,
         'SQbabyai-DangerRoom-v0': MultiGrid_Safety_Query,
@@ -114,10 +114,10 @@ class ParallelEnv(gym.Env):
         obs, reward, done, info = self.envs[0].step(actions[0])
         if done:
             obs = self.envs[0].reset()
-        # test = []
-        # for local in self.locals:
-        #     test.append(local.recv())
-        results = zip(*[(obs, reward, done, info)] + [local.recv() for local in self.locals])
+        test = []
+        for local in self.locals:
+            test.append(local.recv())
+        results = zip(*[(obs, reward, done, info)] + test)
         return results
 
     def render(self):

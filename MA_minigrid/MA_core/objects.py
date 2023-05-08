@@ -364,7 +364,7 @@ class MADoor(MAWorldObj):
     def toggle(self, env, agent, pos):
         # If the player has the right key to open the door
         if self.is_locked:
-            if isinstance(agent.carrying, Key) and agent.carrying.color == self.color:
+            if isinstance(agent.carrying, MAKey) and agent.carrying.color == self.color:
                 self.is_locked = False
                 self.is_open = True
                 return True

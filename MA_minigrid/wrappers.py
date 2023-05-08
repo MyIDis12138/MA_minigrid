@@ -155,13 +155,19 @@ class KGWrapper(Wrapper):
     one_hot: each sentence is encoded as an onehot channel of the image
     raw: return all raw sentences as a list in observation['kg_cc']
     """
-    def __init__(self, env, penalize_query=False, cc_bonus=0.05, weighted_bonus=False, kg_repr='raw', mode='graph_overlap', n_gram=2,
-                 distractor_file_path=None, n_distractors=0, node_sample_mode='fixed', args=None):
+    def __init__(self, 
+                 env, 
+                 penalize_query=False, 
+                 cc_bonus=0.05, 
+                 weighted_bonus=False, 
+                 kg_repr='raw', 
+                 mode='graph_overlap', 
+                 n_gram=2,
+                 args=None):
         super(KGWrapper, self).__init__(env)
         self.kg_repr = kg_repr
         n_channel = env.observation_space['image'].shape[-1]
         self.moving_actions = ['left', 'right', 'forward', 'pickup', 'drop', 'toggle', 'done']
-        self.colors = ['red', 'green', 'blue', 'purple', 'yellow', 'grey']
 
         self.observation_space = gym.spaces.Box(
             low=0,
@@ -174,16 +180,11 @@ class KGWrapper(Wrapper):
         })
         mode = 'set' if mode == 'no_kg' else mode
         self.KG = KG(mode=mode, n_gram=n_gram)
-        self.cc_bonus = cc_bonus
+        self.cc_bonus = cc_bonus if mode == 'graph_overlap' else 0
         self.penalize_query = penalize_query
         if self.penalize_query:
             self.query_penalty = -0.01
         self.weighted_bonus = weighted_bonus
-        if distractor_file_path:
-            # Generate on the fly
-            self.distractors = True
-        else:
-            self.distractors = False
         self.total_frames_per_proc = args.frames // args.procs if args else 1000
         self.cur_total_frames = 0
         self.decrease_bonus = args.decrease_bonus if args else False
@@ -216,53 +217,9 @@ class KGWrapper(Wrapper):
     def reset(self, **kwargs):
         obs = super().reset(**kwargs)
         self.KG.reset(self.pre_proc_asn(obs['mission']))
-        if self.distractors:
-            new_nodes = self.unwrapped.useful_answers + self.gen_distractors()
-            random.shuffle(new_nodes)
-            for new_node in new_nodes:
-                split_node = new_node.split()
-                if len(self.unwrapped.useful_answers) > 2:
-                    split_ans = self.unwrapped.useful_answers[2].split()
-                    if len(split_node) == 4 and split_node[0] == split_ans[0] and split_node[1] == split_ans[1]:
-                        continue
-                self.KG.update(self.pre_proc_asn(new_node))
 
         obs = self.observation(obs, self.KG.getCC())
         return obs
-
-    def gen_distractors(self):
-        names = ['tim', 'allen', 'tom', 'jack', 'mary', 'mike']
-        objs = ['suitcase', 'toy']
-        colors = ['purple', 'orange', 'blue', 'green', 'gray', 'grey', 'yellow', 'red', 'white', 'pink']
-        shapes = ['box', 'ball', 'key']
-        distractors = []
-        for name in names:
-            for obj in objs:
-                color = random.choice(colors)
-                shape = random.choice(shapes)
-                distractors.append('{} {} {} {}'.format(name, obj, color, shape))
-        places = ['livingroom', 'kitchen', 'restroom']
-        rooms = ['room0', 'room1', 'room2', 'room3', 'room4', 'room5', 'room6', 'room7', 'room8']
-        for name in names:
-            place = random.choice(places)
-            room = random.choice(rooms)
-            distractors.append('{} {} {}'.format(name, place, room))
-
-        for name in names:
-            for color in colors:
-                for shape in objs:
-                    place = random.choice(places)
-                    distractors.append('{} {} {} in {}'.format(name, color, shape, place))
-        directions = ['east', 'west']
-        for color in colors:
-            for room in rooms:
-                dir = random.choice(directions)
-                distractors.append('{} {} in {}'.format(color, room, dir))
-
-
-
-        random.shuffle(distractors)
-        return distractors
 
 
     def observation(self, observation, CC):

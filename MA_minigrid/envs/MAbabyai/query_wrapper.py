@@ -95,8 +95,6 @@ class MultiGrid_Safety_Query(Wrapper):
         self.eps_steps = 0
         self.eps_n_q = 0
         self.action = 'None'
-        if self.mode == 'GPT':
-            self.oracle.reset(self.unwrapped)
         
         if self.random_ans:
             shuffled_vocab = copy.deepcopy(self.vocab)

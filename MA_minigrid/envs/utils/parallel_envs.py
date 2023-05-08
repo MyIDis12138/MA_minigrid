@@ -10,7 +10,18 @@ from MA_minigrid.wrappers import KGWrapper
 from MA_minigrid.envs.MAbabyai.utils.format import Vocabulary 
 from MA_minigrid.envs.MAbabyai.query_GPT import OracleGPT
 
-def make_envs(args, oracle: OracleGPT = None, num_envs: bool = None, verbose: bool = False, render: bool = False, vocab_path: str='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab'):
+def make_envs(
+        env_names: str = None, 
+        oracle: OracleGPT = None, 
+        num_envs: bool = None, 
+        verbose: bool = False, 
+        query: bool = False,
+        n_q: int = 1,
+        query_arch:str = 'flat',
+        kg_wrapper: bool = False,
+        vocab_path: str='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab',
+        **kg_kwargs
+    ):
     mapping = {
         'SQbabyai-DangerGround-v0': MultiGrid_Safety_Query,
         'SQbabyai-DangerRoom-v0': MultiGrid_Safety_Query,
@@ -22,10 +33,10 @@ def make_envs(args, oracle: OracleGPT = None, num_envs: bool = None, verbose: bo
         'SQbabyai-DangerAgent-v0': SingleAgentWrapper,
         #'BabyAI-SGoToFavoriteDangerroom-v0' : DRoom_directionwrapper
     }
-    num_envs = args.procs if not num_envs else num_envs
+    num_envs = num_envs
     #q_wrqpper = mapping[args.env] if args.env in mapping else ObjInBoxMulti_MultiOracle_Query
     envs = []
-    env_names = args.env.split(',')
+    env_names = env_names
     n_diff_envs = len(env_names)
     n_proc_per_env = math.ceil(num_envs / n_diff_envs)
     for env_name in env_names:
@@ -34,29 +45,19 @@ def make_envs(args, oracle: OracleGPT = None, num_envs: bool = None, verbose: bo
             env = gym.make(env_name)
             dir_wrapper = dir_wrapper_mapping[env_name]
             env = dir_wrapper(env)
-            #env = SpecialWrapper(env)
-            if args.query:
+            if query:
                 env = q_wrqpper(env, 
-                                mode=args.query_mode,
                                 oracle=oracle,
+                                n_q=n_q,
                                 restricted=False, 
-                                flat='flat' in args.query_arch, 
-                                n_q=args.n_query, 
                                 verbose=verbose, 
+                                flat= 'flat' in query_arch,
+                                vocab_path=vocab_path,
                                 query_limit=100, 
                                 reliability=1, 
-                                vocab_path=vocab_path,
                             )
-            if args.kg_wrapper:
-                assert not args.ans_image
-                if args.kg_mode == 'no_kg':
-                    if args.cc_bonus != 0:
-                        print('Set CC Bonus to 0 in no_kg mode')
-                        args.cc_bonus = 0
-                env = KGWrapper(env, penalize_query=args.penalize_query, cc_bonus=args.cc_bonus,
-                                weighted_bonus=args.weighted_bonus, kg_repr=args.kg_repr, mode=args.kg_mode, n_gram=args.n_gram,
-                                distractor_file_path=args.distractors_path, n_distractors=args.n_distractors, args=args)
-            env.seed(100 * args.seed + i)
+            if kg_wrapper:
+                env = KGWrapper(env, **kg_kwargs)
             envs.append(env)
     return envs
 
@@ -82,9 +83,33 @@ def worker(conn, env):
 class ParallelEnv(gym.Env):
     """A concurrent execution of environments in multiple processes."""
 
-    def __init__(self, args):
-        self.oracle = OracleGPT(Vocabulary(args.vocab_path))
-        envs = make_envs(args, oracle=self.oracle, num_envs=args.procs, verbose=args.verbose, render=args.render, vocab_path=args.vocab_path)
+    def __init__(
+        self, 
+        env_names, 
+        num_envs, 
+        query,
+        n_q,
+        query_arch,
+        query_mode, 
+        vocab_path, 
+        kg_wrapper,
+        **kwargs
+    ):
+        if query_mode == 'GPT':
+            self.oracle = OracleGPT(Vocabulary(vocab_path))
+        else:
+            self.oracle = None
+            
+        envs = make_envs(oracle=self.oracle, 
+                         kg_wrapper=kg_wrapper,
+                         query=query,
+                         query_arch=query_arch,
+                         env_names=env_names,
+                         n_q=n_q,
+                         num_envs=num_envs, 
+                         verbose=False, 
+                         vocab_path=vocab_path,
+                         **kwargs)
         assert len(envs) >= 1, "No environment given."
 
         self.envs = envs
@@ -114,10 +139,7 @@ class ParallelEnv(gym.Env):
         obs, reward, done, info = self.envs[0].step(actions[0])
         if done:
             obs = self.envs[0].reset()
-        test = []
-        for local in self.locals:
-            test.append(local.recv())
-        results = zip(*[(obs, reward, done, info)] + test)
+        results = zip(*[(obs, reward, done, info)] + [local.recv() for local in self.locals])
         return results
 
     def render(self):

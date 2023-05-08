@@ -24,13 +24,13 @@ class OracleGPT:
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=messages,
-            temperature=0, 
+            temperature=0.1, 
         )   
         return response.choices[0].message["content"]
     
     def gen_prompts(self, query:str):
         prompt = f"""\
-        You are an oracle in a grid world. You are trying to answer the questions asked by the agents strictly based on the knowledge you have.\
+        You are an oracle in a grid world. You should answer the questions asked by the agents strictly based on the knowledge you have.\
         If the agents ask you a question that you don't know the answer to, reply with "I dont know".\
         The agents mission: ```{self.agent_mission}```.\
         The knowledge of the environment you have is as follows: ```{self.knowledge_facts}```. \

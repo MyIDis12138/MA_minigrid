@@ -63,14 +63,14 @@ map = {
 
 
 if __name__ == "__main__":
-    #env_name = 'SQbabyai-DangerGround-v0'
+    env_name = 'SQbabyai-DangerGround-v0'
     #env_name = 'SQbabyai-DangerRoom-v0'
-    env_name = 'SQbabyai-DangerAgent-v0'
+    #env_name = 'SQbabyai-DangerAgent-v0'
     #env_name = 'SQbabyai-DangerAgent-v0'
     env = gym.make(env_name)
     Oracle = OracleGPT(Vocabulary(file_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt'))
     env = SingleAgentWrapper(env)
-    env = MultiGrid_Safety_Query(env, oracle=Oracle,verbose=True, mode='rule', vocab_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt')
+    env = MultiGrid_Safety_Query(env, oracle=Oracle,verbose=True, mode='GPT', vocab_path='/home/yang/MA_minigrid/MA_minigrid/envs/MAbabyai/vocab/vocab1.txt')
     env = KGWrapper(env, kg_repr='raw', mode='graph_overlap')
     manual_control = ManualControl(env, key_to_action=key_to_action, question_set=map[env_name])
     manual_control.start()

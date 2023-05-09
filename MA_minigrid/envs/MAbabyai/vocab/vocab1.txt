@@ -58,6 +58,7 @@ big adj
 danger adj
 safe adj
 favorite adj
+dangerous adj
 go v
 dont v
 know v

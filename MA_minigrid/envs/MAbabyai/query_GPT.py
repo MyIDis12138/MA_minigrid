@@ -1,4 +1,5 @@
 import os 
+import re
 from typing import List, Tuple
 
 import openai
@@ -107,22 +108,31 @@ class OracleGPT:
 
     def get_completion(self, prompt):
         messages = [{"role": "system", "content": prompt}]
-        response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=messages,
-            temperature=0.1, 
-            temperature=0.1, 
-        )   
+        while True:
+            try:
+                response = openai.ChatCompletion.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.1, 
+                )   
+                if response:
+                    break
+            except:
+                continue
+
         return response.choices[0].message["content"]
     
     def gen_prompts(self, query:str, env_encode:int):
         prompt = f"""\
-        You are an oracle in a grid world. You are answering the questions asked by the agents strictly based on the knowledge you have.\
-        If the agents ask you a question that you don't know the answer to, reply with "I dont know".
-        The knowledge facts of the environment: ```{self.knowledge_facts[env_encode]}```. \
-        The agents mission: ```{self.agent_mission[env_encode]}```.\
-        Agent question: ```{query}```\n
-        Organize your responds with the words: ```{self.vocab.vocab}```, you can not use any other words out of them. 
+        As an oracle in a grid world, your role is to answer questions posed by agents based solely on your existing knowledge. If you encounter a question for which you do not know the answer, simply respond with "I dont know."
+        
+        IMPORTANT: When formulating your responses, you must STRICTLY only use the words found in: ```{self.vocab.vocab}```. It is crucial to adhere to this rule and avoid using words outside of this list.
+        
+        Knowledge of the environment: ```{self.knowledge_facts[env_encode]}```
+        Agent's mission: ```{self.agent_mission[env_encode]}```
+        Agent's question: ```{query}```
+        
+        Once again, remember to use ONLY words from the allowed vocabulary: ```{self.vocab.vocab}```. Failure to follow this constraint is not acceptable.\
         """
         return prompt
 
@@ -132,9 +142,34 @@ class OracleGPT:
             return self.memory[env_encode][query]
         prompt = self.gen_prompts(query, env_encode)
         completion = self.get_completion(prompt)
+        while not self.is_response_valid(completion):
+            prompt += f"\nInvalid response: {completion}"
+            completion = self.get_completion(prompt)
+            print("Invalid response regenerate: ", completion)
         self.memory[env_encode].update({query: completion})
         return completion
     
+    def is_response_valid(self, response):
+        response_words = re.findall("([a-z0-9]+)", response.lower())
+        self.preprocess(response_words)
+        for word in response_words:
+            if word not in self.vocab.vocab:
+                print(f"Invalid response: {response}, {word} is not in the vocab.")
+                return False
+        return True
+    
+    def preprocess(self, ans):
+        if 'is' in ans:
+            ans.remove('is')
+        if 'in' in ans:
+            ans.remove('in')
+        if 's' in ans:
+            ans.remove('s')
+        if 'don' in ans:
+            ans[ans.index('don')] = 'dont'
+        if 't' in ans:
+            ans.remove('t')
+
 
     def reset(self, env: MultiGridEnv):
         if env.encode not in self.knowledge_facts:

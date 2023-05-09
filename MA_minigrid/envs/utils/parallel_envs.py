@@ -13,6 +13,7 @@ from MA_minigrid.envs.MAbabyai.query_GPT import OracleCentralizedGPT, OracleGPT
 
 def make_envs(
         env_names: str = None, 
+        query_mode: str = 'rule',
         oracle: OracleGPT = None, 
         num_envs: bool = None, 
         verbose: bool = False, 
@@ -49,6 +50,7 @@ def make_envs(
             if query:
                 env = q_wrqpper(env, 
                                 oracle=oracle,
+                                mode=query_mode,
                                 n_q=n_q,
                                 restricted=False, 
                                 verbose=verbose, 
@@ -117,6 +119,7 @@ class ParallelEnv(gym.Env):
         kg_wrapper,
         **kwargs
     ):
+        self.mode = query_mode
         if query_mode == 'GPT':
             self.oracle = OracleGPT(Vocabulary(vocab_path))
         else:
@@ -128,6 +131,7 @@ class ParallelEnv(gym.Env):
                          query_arch=query_arch,
                          env_names=env_names,
                          n_q=n_q,
+                         query_mode=query_mode,
                          num_envs=num_envs, 
                          verbose=False, 
                          vocab_path=vocab_path,
@@ -141,7 +145,8 @@ class ParallelEnv(gym.Env):
 
     def reset(self):
         results = [env.reset() for env in self.envs]
-        self.oracle.reset_all(self.envs)
+        if self.mode == 'GPT':
+            self.oracle.reset_all(self.envs)
         return results
 
     def step(self, actions):
@@ -150,7 +155,8 @@ class ParallelEnv(gym.Env):
             obs, reward, done, info = env.step(action)
             if done:
                 obs = env.reset()
-                self.oracle.reset(env)
+                if self.mode == 'GPT':
+                    self.oracle.reset(env)
             results.append((obs, reward, done, info))
 
         batched_results = tuple(map(list, zip(*results)))

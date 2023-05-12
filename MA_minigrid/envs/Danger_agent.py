@@ -33,8 +33,8 @@ class DangerAgentEnv(MARoomGridLevel):
         self.agent_start_pos = (1, 1)
         self.robot_poss = [
             (self.agent_start_pos[0], self.agent_start_pos[1]+2),
-            (self.room_size-self.agent_start_pos[0]-1, self.agent_start_pos[1]+2),
             (self.agent_start_pos[0]+2, self.agent_start_pos[1]),
+            (self.room_size-self.agent_start_pos[0]-1, self.agent_start_pos[1]+2),
             (self.agent_start_pos[0]+2, self.room_size-self.agent_start_pos[1]-1),
         ]
         self.call = call
@@ -64,10 +64,10 @@ class DangerAgentEnv(MARoomGridLevel):
         self.put_obj(self.agents[0],*self.agent_start_pos)
         self.agents[0].dir = 0
 
-        for id in range(2):
-            rand_pos = self._rand_int(0,2)
-            self.put_obj(self.agents[id+1],*self.robot_poss[rand_pos+id*2])
-            self.agents[id+1].dir = id
+        for i in range(2):
+            rand_pos = self._rand_subset([0+i,2+i], 1)[0]
+            self.put_obj(self.agents[i+1],*self.robot_poss[rand_pos])
+            self.agents[i+1].dir = rand_pos
 
         self.robot_turns = [False, False]
 
@@ -82,6 +82,7 @@ class DangerAgentEnv(MARoomGridLevel):
             agent.mission = self.instrs_controller.surface(self, agent.id)
 
         self.knowledge_facts = ['danger robot is {}'.format(self.agents[danger_agent_id].color)]
+        #print(self.knowledge_facts)
         self.missions = {
             0: self.instrs_controller.surface(self, agent_id),
             1: "robot with no mission",
@@ -90,6 +91,7 @@ class DangerAgentEnv(MARoomGridLevel):
         self.encode = (self.agents[danger_agent_id].color)
 
     def get_answer(self, question, default_answer='I　dont　know'):
+        #return default_answer
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == 'robot':
             return self.knowledge_facts[0]
         else:

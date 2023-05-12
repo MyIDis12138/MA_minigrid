@@ -52,7 +52,6 @@ class DangerGroundEnv(MARoomGridLevel):
 
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
-
         self.knowledge_facts = ['danger {} is {}'.format(self.danger_names[self.danger_name_idx], self.lava_colors[self.danger_color_idx])]
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
         self.encode = (self.danger_color_idx, self.danger_name_idx)
@@ -122,6 +121,7 @@ class DangerGroundEnv(MARoomGridLevel):
         return danger_color_idx, danger_name_idx
 
     def get_answer(self, question, default_answer='I　dont　know'):
+        #return default_answer
         if question[0] == 'what' and question[1] == 'is' and question[2] == 'danger' and question[3] == self.danger_names[self.danger_name_idx]:
             return self.knowledge_facts[0]
         else:

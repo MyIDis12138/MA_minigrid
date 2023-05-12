@@ -253,5 +253,11 @@ class KGWrapper(Wrapper):
             ans.remove('is')
         if 'in' in ans:
             ans.remove('in')
+        if 's' in ans:
+            ans.remove('s')
+        if 'don' in ans:
+            ans[ans.index('don')] = 'dont'
+        if 't' in ans:
+            ans.remove('t')
         return ans
 

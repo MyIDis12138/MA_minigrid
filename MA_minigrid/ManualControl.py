@@ -19,6 +19,7 @@ class ManualControl:
         question_set: list[str] = None,
         seed: int=None,
         key_to_action=None,
+        query_mode: str = "rule",
     ) -> None:
         """
         Manual control of the environment with keyboard.
@@ -30,6 +31,7 @@ class ManualControl:
         self.seed = seed
         self.closed = False
         self.question_set = question_set
+        self.query_mode = query_mode
         if key_to_action is None:
             self.key_to_action = {
                 "a": Actions.left,
@@ -74,6 +76,8 @@ class ManualControl:
 
     def reset(self, seed=None):
         self.env.reset()
+        if self.query_mode=="GPT":
+            self.env.oracle.reset(self.env)
         self.env.render()
         if self.question_set:
             for question in self.question_set:

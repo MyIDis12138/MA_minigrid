@@ -93,25 +93,37 @@ class DangerRoomEnv(MARoomGridLevel):
                     '{} toy is {} {}'.format(self.names[fav_nameid], self.obj.color, self.obj.type),
                     '{} {} in room{}'.format(self.obj.color, self.obj.type, fav_room_id ),
                     '{}\'s room is room{}'.format(self.names[danger_nameid], danger_room_id), 
-                    '{} toy is {} {}'.format(self.names[danger_nameid], self.objs[1].color, self.objs[1].type),
-                    '{}\'s room is room{}'.format(self.names[fav_nameid], other_room), 
                 ]
+        # self.knowledge_facts = [
+        #             '{} toy is {} {}'.format(self.names[fav_nameid], self.obj.color, self.obj.type),
+        #             '{} {} in room{}'.format(self.obj.color, self.obj.type, fav_room_id ),
+        #             '{}\'s room is room{}'.format(self.names[danger_nameid], danger_room_id), 
+        #             '{} toy is {} {}'.format(self.names[danger_nameid], self.objs[1].color, self.objs[1].type),
+        #             '{}\'s room is room{}'.format(self.names[fav_nameid], other_room), 
+        #         ]
         
         for agent in self.agents:
             agent.mission = self.instrs_controller.surface(self, agent.id)
         self.missions = {agent_id: self.instrs_controller.surface(self, agent_id)}
+        # self.encode = (fav_nameid, 
+        #                danger_nameid,
+        #                self.obj.color, 
+        #                self.obj.type, 
+        #                danger_room_id, 
+        #                self.objs[1].color, 
+        #                self.objs[1].type, 
+        #                other_room
+        #             )
         self.encode = (fav_nameid, 
-                       danger_nameid,
-                       self.obj.color, 
-                       self.obj.type, 
-                       self.objs[1].color, 
-                       self.objs[1].type, 
-                       danger_room_id, 
-                       other_room
-                    )
+                danger_nameid,
+                self.obj.color, 
+                self.obj.type, 
+                danger_room_id, 
+            )
 
     # map the question to the answer
     def get_answer(self, question, default_answer='I　dont　know'):
+        #return default_answer
         if question[0] == 'what' and question[1] == 'is' and question[2] == f'{self.names[self.encode[0]]}' and question[3] == 'toy':
             return self.knowledge_facts[0]
         elif question[0] == 'where' and question[1] == 'is' and question[2] == f'{self.obj.color}' and question[3] == f'{self.obj.type}':

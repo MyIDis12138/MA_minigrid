@@ -109,19 +109,23 @@ class ParallelEnv(gym.Env):
 
     def __init__(
         self, 
-        env_names, 
-        num_envs, 
-        query,
-        n_q,
-        query_arch,
-        query_mode, 
-        vocab_path, 
-        kg_wrapper,
+        num_envs: int, 
+        env_names: str, 
+        query: bool,
+        n_q: int,
+        query_arch: str,
+        query_mode: str, 
+        verbose: bool = False,
+        memory_path: str = None,
+        vocab_path: str = None, 
+        kg_wrapper: bool = False,
         **kwargs
     ):
         self.mode = query_mode
         if query_mode == 'GPT':
             self.oracle = OracleGPT(Vocabulary(vocab_path))
+            if memory_path:
+                self.oracle.load_memory(memory_path)
         else:
             self.oracle = None
             
@@ -133,7 +137,7 @@ class ParallelEnv(gym.Env):
                          n_q=n_q,
                          query_mode=query_mode,
                          num_envs=num_envs, 
-                         verbose=False, 
+                         verbose=verbose, 
                          vocab_path=vocab_path,
                          **kwargs)
         assert len(envs) >= 1, "No environment given."
@@ -164,6 +168,14 @@ class ParallelEnv(gym.Env):
 
     def render(self):
         raise NotImplementedError
+    
+    def store_memory(self, path):
+        if self.mode == 'GPT':
+            self.oracle.store_memory(path)
+    
+    def load_memory(self, path):
+        if self.mode == 'GPT':
+            self.oracle.load_memory(path)
 
 
 
